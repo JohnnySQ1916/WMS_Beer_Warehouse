@@ -37,7 +37,7 @@ def create_app(config_name='development'):
     app = Flask(__name__)
     print(">>> Tworzenie aplikacji Flask OK")
     app.config.from_object(config[config_name])
-
+    print(">>> DATABASE URI:", app.config.get("SQLALCHEMY_DATABASE_URI"))
     db.init_app(app)
 
     app.register_blueprint(product_bp, url_prefix="/products")
