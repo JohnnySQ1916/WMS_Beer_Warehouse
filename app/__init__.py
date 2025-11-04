@@ -50,6 +50,10 @@ def create_app(config_name='development'):
     if config_name == 'testing':
         with app.app_context():
             db.create_all()
+        
+    @app.route('/')
+    def index():
+        return "<h1>Hello in WMS system in beer Warehouse! Try to be warehouse worker</h1>"
 
     return app
 
