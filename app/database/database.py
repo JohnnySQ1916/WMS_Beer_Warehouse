@@ -1,16 +1,39 @@
-# import psycopg2
-from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, declarative_base
+from dotenv import load_dotenv
+import os
+from app.database.base import Base
 
-db = SQLAlchemy()
+load_dotenv()
 
-# # Ustawienia połączenia z bazą danych
-# connection = psycopg2.connect(
-#     dbname="WMS One More Beer",      # Nazwa twojej bazy danych
-#     user="postgres",          # Nazwa użytkownika bazy danych
-#     password="cwks1916",    # Hasło do bazy danych
-#     host='localhost',         # Adres serwera bazy danych
-#     port=5432               # Port bazy danych (domyślnie 5432)
-# )
+DATABASE_URL = os.getenv("DATABASE_URL")
+DATABASE_URL_TEST = os.getenv('DATABASE_URL_TEST')
 
-# # Tworzenie kursora
-# db = connection.cursor()
+# Tworzymy silnik SQLAlchemy
+engine = create_engine(DATABASE_URL)
+test_engine = create_engine(DATABASE_URL_TEST)
+
+# Tworzymy klasę bazową do modeli
+
+
+# Tworzymy fabrykę sesji
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+TestSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
+
+# Funkcja pomocnicza do uzyskania sesji (używana w FastAPI)
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+
+
+
+
+# from flask_sqlalchemy import SQLAlchemy
+
+# db = SQLAlchemy()
+

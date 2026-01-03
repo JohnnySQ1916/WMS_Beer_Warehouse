@@ -1,15 +1,17 @@
-from flask import Blueprint, jsonify, request
-from app.warehouse_operations.product_operations import find_product_by_ean, changing_product_location_by_ean
-from webargs.flaskparser import use_args
-from app.utils import token_required
+from app.warehouse_operations.product_operations import  ProductService
+from app.utils import get_current_user
+from fastapi import APIRouter, Depends, HTTPException
+from app.database.database import get_db
+from sqlalchemy.orm import Session
 
 
-product_bp = Blueprint('products', __name__, url_prefix= '/products')
+router = APIRouter(prefix= '/products', tags = ['Products'])
 
-@token_required
-@product_bp.route('/<string:ean>', methods = ['GET'])
-def get_product_by_ean(ean):
-    product = find_product_by_ean(ean)
-    if product:
-        return jsonify(product)
-    return jsonify({'error': 'Product not found'}), 404
+
+@router.get('/{ean}')
+def get_product_by_ean(ean: str, db: Session = Depends(get_db), current_user= Depends(get_current_user)):
+    service = ProductService(db)
+    product = service.find_product_by_ean(ean)
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    return product

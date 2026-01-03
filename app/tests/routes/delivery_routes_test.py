@@ -1,11 +1,9 @@
-from app.database.database import db
 from sqlalchemy import text
-from app.tests.conftest import app, db_session, client, token
 import pytest
 from app.routes.location_operation_routes import get_products_on_location
 from functools import wraps
-from app.routes.delivery_routes import create_supplier_delivery_document
-from app.warehouse_operations.deliver_services import supplier_exist, create_supplier_deliver, create_deliver_details
+from app.warehouse_operations.deliver_services import DeliveryService
+from datetime import date as dt, timedelta
 
 
 params =[("RADU LEO", "RADUGA LEON BUT. 0,5 L", "5902176770099", 45, "szt ", 0.77, "RI-13-03", "2025-12-09", 0, 45),
@@ -36,31 +34,31 @@ def parametrize_decorator_supplier(func):
     return wrapper
 
 
-def prepare_db():
+def prepare_db(db_session):
     for code, product_name, ean, amount, jednostka, unit_weight, location, date, reserved_amount, available_amount in params:
-        db.session.execute(text("""INSERT INTO products (code, product_name, ean, amount, jednostka, unit_weight, location, date, reserved_amount, available_amount)
+        db_session.execute(text("""INSERT INTO products (code, product_name, ean, amount, jednostka, unit_weight, location, date, reserved_amount, available_amount)
                                 VALUES (:code, :product_name, :ean, :amount, :jednostka, :unit_weight, :location, :date, :reserved_amount, :available_amount)"""),
                                 {'code': code, 'product_name': product_name, 'ean': ean, 'amount': amount, 'jednostka': jednostka, 'unit_weight': unit_weight, 
                                 'location': location, 'date': date, 'reserved_amount': reserved_amount, 'available_amount': available_amount})
-        db.session.execute(text("""INSERT INTO product_details (product_name, code, ean, purchase_price, unit_weight) 
+        db_session.execute(text("""INSERT INTO product_details (product_name, code, ean, purchase_price, unit_weight) 
                                 VALUES (:product_name, :code, :ean, :purchase_price, :unit_weight)"""), {'product_name': product_name,'code': code,
         'ean': ean,'purchase_price': 10, 'unit_weight': unit_weight})
-        db.session.execute(text("""INSERT INTO reservation (product_name, ean, amount, reserved_amount, available_amount)
+        db_session.execute(text("""INSERT INTO reservation (product_name, ean, amount, reserved_amount, available_amount)
                                 VALUES (:product_name, :ean, :amount, :reserved_amount, :available_amount)"""),
                                 {'product_name': product_name, 'ean': ean, 'amount': amount, 'reserved_amount': reserved_amount, 'available_amount': available_amount})
-        db.session.execute(text(f"INSERT INTO location_weights (location) VALUES (:location)"), {'location': location})
+        db_session.execute(text(f"INSERT INTO location_weights (location) VALUES (:location)"), {'location': location})
     for customer_id, company_name, contact_name, contact_title, address, city, postal_code, country, phone, fax in customers:
-        db.session.execute(text("""INSERT INTO customers (customer_id, company_name, contact_name, contact_title, address, city, postal_code, country, phone, fax)
+        db_session.execute(text("""INSERT INTO customers (customer_id, company_name, contact_name, contact_title, address, city, postal_code, country, phone, fax)
                                 VALUES (:customer_id, :company_name, :contact_name, :contact_title, :address, :city, :postal_code, :country, :phone, :fax)"""),
                                 {'customer_id': customer_id, 'company_name': company_name, 'contact_name': contact_name, 'contact_title': contact_title, 
                                  'address': address, 'city': city, 'postal_code': postal_code, 'country': country, 'phone': phone, 'fax': fax})  
     for supplier_id, company_name, contact_name, contact_title, address, city, region, postal_code, country, phone, homepage in suppliers:
-        db.session.execute(text("""INSERT INTO suppliers (supplier_id, company_name, contact_name, contact_title, address, city, region, postal_code, country, phone, homepage)
+        db_session.execute(text("""INSERT INTO suppliers (supplier_id, company_name, contact_name, contact_title, address, city, region, postal_code, country, phone, homepage)
                                 VALUES (:supplier_id, :company_name, :contact_name, :contact_title, :address, :city, :region, :postal_code, :country, :phone, :homepage)"""),
                                 {'supplier_id': supplier_id, 'company_name': company_name, 'contact_name': contact_name, 'contact_title': contact_title, 'address': address, 
                                  'city': city, 'region': region, 'postal_code': postal_code, 'country': country, 'phone': phone, 'homepage': homepage})
-    db.session.execute(text(f"INSERT INTO location_weights (location) VALUES (:location)"), {'location': 'RB-01-01'}) 
-    db.session.commit()
+    db_session.execute(text(f"INSERT INTO location_weights (location) VALUES (:location)"), {'location': 'RB-01-01'}) 
+    db_session.commit()
 
 company_name = "Grandma Kelly's Homestead"
 external_number = 'ZO-001-2025'
@@ -68,13 +66,14 @@ delivery_date = '2025-11-12'
 user_id = 'ks'
 
 @parametrize_decorator_supplier
-def test_create_supplier_delivery_document(token, client, supplier_id, company_name, contact_name, contact_title, address, city, region, postal_code, country, phone, homepage):
-    prepare_db()
+def test_create_supplier_delivery_document(db_session, token, client, supplier_id, company_name, contact_name, contact_title, address, city, region, postal_code, country, phone, homepage):
+    prepare_db(db_session)
+    deliver_service = DeliveryService(db_session)
     response = client.post('/delivery/create_supplier_delivery', headers={"Authorization": f"Bearer {token}"}, 
                     json = {'supplier': company_name, 'deliver_external_number': external_number, 'delivery_date': delivery_date})
-    response_data = response.get_json()
-    exist = supplier_exist(company_name)
-    create = create_supplier_deliver
+    response_data = response.json()
+    exist = deliver_service.supplier_exist(company_name)
+    create = deliver_service.create_supplier_deliver
     if exist:
         response.status_code == 200
         response_data['message'] == f'Delivery add to database with number {create}'
@@ -83,246 +82,255 @@ def test_create_supplier_delivery_document(token, client, supplier_id, company_n
         response_data['message'] == 'There is no such supplier in database. Add supplier to database'
 
 @parametrize_decorator
-def test_create_deliver_details_document(client, token, code, product_name, ean, amount, jednostka, unit_weight, location, date, reserved_amount, available_amount):
-    prepare_db()
+def test_create_deliver_details_document(db_session, client, token, code, product_name, ean, amount, jednostka, unit_weight, location, date, reserved_amount, available_amount):
+    prepare_db(db_session)
+    deliver_service = DeliveryService(db_session)
     products = []
     for code, product_name, ean, amount, jednostka, unit_weight, location, date, reserved_amount, available_amount in params:
         products.append({'product_name': product_name, 'ean': ean, 'expected_amount': 10})
-    deliver_id = create_supplier_deliver(company_name, external_number, delivery_date)
+    deliver_id = deliver_service.create_supplier_deliver(company_name, external_number, delivery_date)
     response = client.post(f'/delivery/create_delivery/{deliver_id}', headers={"Authorization": f"Bearer {token}"}, json = {'products': products})
-    response_data = response.get_json()
+    response_data = response.json()
     assert response.status_code == 200
     assert response_data['message'] == f'Products add to deliver_order number {deliver_id}'
 
 @parametrize_decorator
-def test_check_supplier_delivery_positive(client, token, code, product_name, ean, amount, jednostka, unit_weight, location, date, reserved_amount, available_amount):
-    prepare_db()
+def test_check_supplier_delivery_positive(db_session, client, token, code, product_name, ean, amount, jednostka, unit_weight, location, date, reserved_amount, available_amount):
+    prepare_db(db_session)
+    deliver_service = DeliveryService(db_session)
     products = []
     for code, product_name, ean, amount, jednostka, unit_weight, location, date, reserved_amount, available_amount in params:
         products.append({'product_name': product_name, 'ean': ean, 'expected_amount': 10})
-    deliver_id = create_supplier_deliver(company_name, external_number, delivery_date)
+    deliver_id = deliver_service.create_supplier_deliver(company_name, external_number, delivery_date)
     client.post(f'/delivery/create_delivery/{deliver_id}', headers={"Authorization": f"Bearer {token}"}, json = {'products': products})
     response = client.get(f'/delivery/check_supplier_deliver', headers={"Authorization": f"Bearer {token}"})
-    response_data = response.get_json()
-    delivery = db.session.execute(text("SELECT supplier FROM delivery_order WHERE status = 'undone' OR status = 'pending'")).fetchall()
+    response_data = response.json()
+    delivery = db_session.execute(text("SELECT supplier FROM delivery_order WHERE status = 'undone' OR status = 'pending'")).fetchall()
     assert response.status_code == 200
     assert response_data == {'Supplier': [{'Supplier': row.supplier} for row in delivery]}
 
 @parametrize_decorator
-def test_check_supplier_delivery_negative(client, token, code, product_name, ean, amount, jednostka, unit_weight, location, date, reserved_amount, available_amount):
-    prepare_db()
+def test_check_supplier_delivery_negative(db_session, client, token, code, product_name, ean, amount, jednostka, unit_weight, location, date, reserved_amount, available_amount):
+    prepare_db(db_session)
+    deliver_service = DeliveryService(db_session)
     deliver_id = '111'
     products = []
     for code, product_name, ean, amount, jednostka, unit_weight, location, date, reserved_amount, available_amount in params:
         products.append({'product_name': product_name, 'ean': ean, 'expected_amount': 10})
     client.post(f'/delivery/create_delivery/{deliver_id}', headers={"Authorization": f"Bearer {token}"}, json = {'products': products})
     response = client.get(f'/delivery/check_supplier_deliver', headers={"Authorization": f"Bearer {token}"})
-    response_data = response.get_json()
-    delivery = db.session.execute(text("SELECT supplier FROM delivery_order WHERE status = 'undone' OR status = 'pending'")).fetchall()
+    response_data = response.json()
+    delivery = db_session.execute(text("SELECT supplier FROM delivery_order WHERE status = 'undone' OR status = 'pending'")).fetchall()
     assert response.status_code == 404
-    assert response_data['message'] == 'No products found for given delivery ID'
+    assert response_data['detail'] == 'No products found for execute delivery'
     
 @parametrize_decorator
-def test_check_delivery_positive(client, token, code, product_name, ean, amount, jednostka, unit_weight, location, date, reserved_amount, available_amount):
-    prepare_db()
+def test_check_delivery_positive(db_session, client, token, code, product_name, ean, amount, jednostka, unit_weight, location, date, reserved_amount, available_amount):
+    prepare_db(db_session)
+    deliver_service = DeliveryService(db_session)
     products = []
     for code, product_name, ean, amount, jednostka, unit_weight, location, date, reserved_amount, available_amount in params:
         products.append({'product_name': product_name, 'ean': ean, 'expected_amount': 10})
-    deliver_id = create_supplier_deliver(company_name, external_number, delivery_date)
+    deliver_id = deliver_service.create_supplier_deliver(company_name, external_number, delivery_date)
     client.post(f'/delivery/create_delivery/{deliver_id}', headers={"Authorization": f"Bearer {token}"}, json = {'products': products})
     response = client.get(f'/delivery/check_delivery/{deliver_id}', headers={"Authorization": f"Bearer {token}"})
-    response_data = response.get_json()
-    delivery_query = text("SELECT product_name, expected_amount FROM deliver_details WHERE deliver_id = :deliver_id AND status = 'undone'")
-    delivery = db.session.execute(delivery_query, {'deliver_id': deliver_id}).fetchall()
-    print(delivery)
-    print(response_data)
+    response_data = response.json()
+    delivery_query = text("SELECT product_name, expected_amount, ean FROM deliver_details WHERE deliver_id = :deliver_id AND status = 'undone'")
+    delivery = db_session.execute(delivery_query, {'deliver_id': deliver_id}).fetchall()
     assert response.status_code == 200
     assert response_data == {
         'Products': [
-            {'Product name': row.product_name,
-            'Expected Amount': row.expected_amount}
+            {'Product_name': row.product_name,
+            'Expected_Amount': row.expected_amount,
+            'EAN': row.ean}
         for row in delivery]}
 
 @parametrize_decorator
-def test_check_delivery_negative(client, token, code, product_name, ean, amount, jednostka, unit_weight, location, date, reserved_amount, available_amount):
-    prepare_db()
+def test_check_delivery_negative(db_session, client, token, code, product_name, ean, amount, jednostka, unit_weight, location, date, reserved_amount, available_amount):
+    prepare_db(db_session)
     products = []
     deliver_id = '111'
     for code, product_name, ean, amount, jednostka, unit_weight, location, date, reserved_amount, available_amount in params:
         products.append({'product_name': product_name, 'ean': ean, 'expected_amount': 10})
     response = client.get(f'/delivery/check_delivery/{deliver_id}', headers={"Authorization": f"Bearer {token}"})
-    response_data = response.get_json()
+    response_data = response.json()
     assert response.status_code == 404
-    assert response_data['message']== 'No products found for given delivery ID'
+    assert response_data['detail']== 'No products found for given delivery ID'
 
 @parametrize_decorator
-def test_enter_ean_delivery_positive(client, token, code, product_name, ean, amount, jednostka, unit_weight, location, date, reserved_amount, available_amount):
-    prepare_db()
+def test_enter_ean_delivery_positive(db_session, client, token, code, product_name, ean, amount, jednostka, unit_weight, location, date, reserved_amount, available_amount):
+    prepare_db(db_session)
+    deliver_service = DeliveryService(db_session)
     products = []
     for code, product_name, ean, amount, jednostka, unit_weight, location, date, reserved_amount, available_amount in params:
         products.append({'product_name': product_name, 'ean': ean, 'expected_amount': 10})
-    deliver_id = create_supplier_deliver(company_name, external_number, delivery_date)
+    deliver_id = deliver_service.create_supplier_deliver(company_name, external_number, delivery_date)
     client.post(f'/delivery/create_delivery/{deliver_id}', headers={"Authorization": f"Bearer {token}"}, json = {'products': products})
     response = client.post(f'/delivery/enter_ean_delivery/{deliver_id}', headers={"Authorization": f"Bearer {token}"}, json = {'ean': ean})
-    response_data = response.get_json()
-    ean_location = db.session.execute(text('SELECT product_name, amount, location, date FROM products WHERE ean = :ean'), {'ean': ean}).fetchall()
+    response_data = response.json()
+    ean_location = db_session.execute(text('SELECT product_name, amount, location, date FROM products WHERE ean = :ean'), {'ean': ean}).fetchall()
     assert response.status_code == 200
     assert response_data['Expected Amount'] == 10
     assert response_data['Products'] == [{
                 'Product name': row.product_name,
                 'Amount': row.amount,
                 'Location': row.location,
-                'Date': row.date
+                'Date': row.date.strftime('%Y-%m-%d')
             } for row in ean_location]
     assert response_data['message'] == 'Enter product date expired'
 
 
 @parametrize_decorator
-def test_enter_ean_delivery_negative(client, token, code, product_name, ean, amount, jednostka, unit_weight, location, date, reserved_amount, available_amount):
-    prepare_db()
+def test_enter_ean_delivery_negative(db_session, client, token, code, product_name, ean, amount, jednostka, unit_weight, location, date, reserved_amount, available_amount):
+    prepare_db(db_session)
     products = []
     for code, product_name, ean, amount, jednostka, unit_weight, location, date, reserved_amount, available_amount in params:
         products.append({'product_name': product_name, 'ean': ean, 'expected_amount': 10})
     deliver_id = '111'
     response = client.post(f'/delivery/enter_ean_delivery/{deliver_id}', headers={"Authorization": f"Bearer {token}"}, json = {'ean': ean})
-    response_data = response.get_json()
+    response_data = response.json()
     assert response.status_code == 404
-    assert response_data['message'] == 'There is no such ean on deliver list'
+    assert response_data['detail'] == 'There is no such ean on deliver list'
 
 @parametrize_decorator
-def test_enter_date_delivery_positive(client, token, code, product_name, ean, amount, jednostka, unit_weight, location, date, reserved_amount, available_amount):
-    prepare_db()
+def test_enter_date_delivery_positive(db_session, client, token, code, product_name, ean, amount, jednostka, unit_weight, location, date, reserved_amount, available_amount):
+    prepare_db(db_session)
+    deliver_service = DeliveryService(db_session)
     products = []
     for code, product_name, ean, amount, jednostka, unit_weight, location, date, reserved_amount, available_amount in params:
         products.append({'product_name': product_name, 'ean': ean, 'expected_amount': 10})
-    expiration_date = '2025-12-15'
-    deliver_id = create_supplier_deliver(company_name, external_number, delivery_date)
+    expiration_date = (dt.today() + timedelta(days=90)).isoformat()
+    deliver_id = deliver_service.create_supplier_deliver(company_name, external_number, delivery_date)
     client.post(f'/delivery/create_delivery/{deliver_id}', headers={"Authorization": f"Bearer {token}"}, json = {'products': products})
     client.post(f'/delivery/enter_ean_delivery/{deliver_id}', headers={"Authorization": f"Bearer {token}"}, json = {'ean': ean})
     response = client.post(f'/delivery/enter_date/{deliver_id}/{ean}', headers={"Authorization": f"Bearer {token}"}, json = {'date': expiration_date})
-    response_data = response.get_json()
+    response_data = response.json()
     print(response_data)
     assert response.status_code == 200
-    assert response_data['message'] == "Enter amount of that product. If there is bigger number than expected amount, add to args 'force': True "
+    assert response_data['message'] == "Enter amount of that product. If there is bigger number than expected amount, add to args 'force': true "
 
 
 @parametrize_decorator
-def test_enter_date_delivery_no_ean(client, token, code, product_name, ean, amount, jednostka, unit_weight, location, date, reserved_amount, available_amount):
-    prepare_db()
+def test_enter_date_delivery_no_ean(db_session, client, token, code, product_name, ean, amount, jednostka, unit_weight, location, date, reserved_amount, available_amount):
+    prepare_db(db_session)
+    deliver_service = DeliveryService(db_session)
     products = []
     for code, product_name, ean, amount, jednostka, unit_weight, location, date, reserved_amount, available_amount in params:
         products.append({'product_name': product_name, 'ean': ean, 'expected_amount': 10})
-    expiration_date = '2025-12-15'
-    deliver_id = create_supplier_deliver(company_name, external_number, delivery_date)
+    expiration_date = (dt.today() + timedelta(days=90)).isoformat()
+    deliver_id = deliver_service.create_supplier_deliver(company_name, external_number, delivery_date)
     client.post(f'/delivery/create_delivery/{deliver_id}', headers={"Authorization": f"Bearer {token}"}, json = {'products': products})
     response = client.post(f'/delivery/enter_date/{deliver_id}/{ean}', headers={"Authorization": f"Bearer {token}"}, json = {'date': expiration_date})
-    response_data = response.get_json()
-    assert response_data['message'] == 'Confirm ean'
+    response_data = response.json()
+    assert response_data['detail'] == 'Confirm ean'
 
 @parametrize_decorator
-def test_enter_date_delivery_wrong_ean(client, token, code, product_name, ean, amount, jednostka, unit_weight, location, date, reserved_amount, available_amount):
-    prepare_db()
+def test_enter_date_delivery_wrong_ean(db_session, client, token, code, product_name, ean, amount, jednostka, unit_weight, location, date, reserved_amount, available_amount):
+    prepare_db(db_session)
+    deliver_service = DeliveryService(db_session)
     products = []
     new_ean = '1234567890000'
     for code, product_name, ean, amount, jednostka, unit_weight, location, date, reserved_amount, available_amount in params:
         products.append({'product_name': product_name, 'ean': ean, 'expected_amount': 10})
-    expiration_date = '2025-12-15'
-    deliver_id = create_supplier_deliver(company_name, external_number, delivery_date)
+    expiration_date = (dt.today() + timedelta(days=90)).isoformat()
+    deliver_id = deliver_service.create_supplier_deliver(company_name, external_number, delivery_date)
     client.post(f'/delivery/create_delivery/{deliver_id}', headers={"Authorization": f"Bearer {token}"}, json = {'products': products})
     client.post(f'/delivery/enter_ean_delivery/{deliver_id}', headers={"Authorization": f"Bearer {token}"}, json = {'ean': ean})
     response = client.post(f'/delivery/enter_date/{deliver_id}/{new_ean}', headers={"Authorization": f"Bearer {token}"}, json = {'date': expiration_date})
-    response_data = response.get_json()
-    print(response_data)
+    response_data = response.json()
     assert response.status_code == 404
-    assert response_data['message'] == 'There is no such ean on deliver list'
+    assert response_data['detail'] == 'There is no such ean on deliver list'
 
 
 @parametrize_decorator
-def test_enter_amount_delivery_positive(client, token, code, product_name, ean, amount, jednostka, unit_weight, location, date, reserved_amount, available_amount):
-    prepare_db()
+def test_enter_amount_delivery_positive(db_session, client, token, code, product_name, ean, amount, jednostka, unit_weight, location, date, reserved_amount, available_amount):
+    prepare_db(db_session)
+    deliver_service = DeliveryService(db_session)
     products = []
     for code, product_name, ean, amount, jednostka, unit_weight, location, date, reserved_amount, available_amount in params:
         products.append({'product_name': product_name, 'ean': ean, 'expected_amount': 10})
-    expiration_date = '2025-12-15'
+    expiration_date = (dt.today() + timedelta(days=90)).isoformat()
     new_amount = 10
-    deliver_id = create_supplier_deliver(company_name, external_number, delivery_date)
+    deliver_id = deliver_service.create_supplier_deliver(company_name, external_number, delivery_date)
     client.post(f'/delivery/create_delivery/{deliver_id}', headers={"Authorization": f"Bearer {token}"}, json = {'products': products})
     client.post(f'/delivery/enter_ean_delivery/{deliver_id}', headers={"Authorization": f"Bearer {token}"}, json = {'ean': ean})
     client.post(f'/delivery/enter_date/{deliver_id}/{ean}', headers={"Authorization": f"Bearer {token}"}, json = {'date': expiration_date})
     response = client.post(f'/delivery/enter_amount_delivery/{deliver_id}/{ean}', headers={"Authorization": f"Bearer {token}"}, json = {'amount': new_amount})
-    response_data = response.get_json()
+    response_data = response.json()
     assert response.status_code == 200
     assert response_data['message'] == 'Enter target location'
 
 @parametrize_decorator
-def test_enter_amount_delivery_greater_amount(client, token, code, product_name, ean, amount, jednostka, unit_weight, location, date, reserved_amount, available_amount):
-    prepare_db()
+def test_enter_amount_delivery_greater_amount(db_session, client, token, code, product_name, ean, amount, jednostka, unit_weight, location, date, reserved_amount, available_amount):
+    prepare_db(db_session)
+    deliver_service = DeliveryService(db_session)
     products = []
     for code, product_name, ean, amount, jednostka, unit_weight, location, date, reserved_amount, available_amount in params:
         products.append({'product_name': product_name, 'ean': ean, 'expected_amount': 10})
-    expiration_date = '2025-12-15'
+    expiration_date = (dt.today() + timedelta(days=90)).isoformat()
     new_amount = 15
-    deliver_id = create_supplier_deliver(company_name, external_number, delivery_date)
+    deliver_id = deliver_service.create_supplier_deliver(company_name, external_number, delivery_date)
     client.post(f'/delivery/create_delivery/{deliver_id}', headers={"Authorization": f"Bearer {token}"}, json = {'products': products})
     client.post(f'/delivery/enter_ean_delivery/{deliver_id}', headers={"Authorization": f"Bearer {token}"}, json = {'ean': ean})
     client.post(f'/delivery/enter_date/{deliver_id}/{ean}', headers={"Authorization": f"Bearer {token}"}, json = {'date': expiration_date})
     response = client.post(f'/delivery/enter_amount_delivery/{deliver_id}/{ean}', headers={"Authorization": f"Bearer {token}"}, json = {'amount': new_amount})
-    response_data = response.get_json()
+    response_data = response.json()
     assert response.status_code == 400
-    assert response_data['message'] == "Entered amount is bigger than expected amount. If you want to confirm that amount, add to args 'force': True"
+    assert response_data['detail'] == "Entered amount is bigger than expected amount. If you want to confirm that amount, add to args 'force': true"
 
 @parametrize_decorator
-def test_enter_amount_delivery_no_date(client, token, code, product_name, ean, amount, jednostka, unit_weight, location, date, reserved_amount, available_amount):
-    prepare_db()
+def test_enter_amount_delivery_no_date(db_session, client, token, code, product_name, ean, amount, jednostka, unit_weight, location, date, reserved_amount, available_amount):
+    prepare_db(db_session)
+    deliver_service = DeliveryService(db_session)
     products = []
     for code, product_name, ean, amount, jednostka, unit_weight, location, date, reserved_amount, available_amount in params:
         products.append({'product_name': product_name, 'ean': ean, 'expected_amount': 10})
-    expiration_date = '2025-12-15'
+    expiration_date = (dt.today() + timedelta(days=90)).isoformat()
     new_amount = 15
-    deliver_id = create_supplier_deliver(company_name, external_number, delivery_date)
+    deliver_id = deliver_service.create_supplier_deliver(company_name, external_number, delivery_date)
     client.post(f'/delivery/create_delivery/{deliver_id}', headers={"Authorization": f"Bearer {token}"}, json = {'products': products})
     client.post(f'/delivery/enter_ean_delivery/{deliver_id}', headers={"Authorization": f"Bearer {token}"}, json = {'ean': ean})
     response = client.post(f'/delivery/enter_amount_delivery/{deliver_id}/{ean}', headers={"Authorization": f"Bearer {token}"}, json = {'amount': new_amount})
-    response_data = response.get_json()
-    assert response_data['message'] == "Confirm date"
+    response_data = response.json()
+    assert response_data['detail'] == "Confirm date"
 
 
 @parametrize_decorator
-def test_enter_target_location_delivery_positive(client, token, code, product_name, ean, amount, jednostka, unit_weight, location, date, reserved_amount, available_amount):
-    prepare_db()
+def test_enter_target_location_delivery_positive(db_session, client, token, code, product_name, ean, amount, jednostka, unit_weight, location, date, reserved_amount, available_amount):
+    prepare_db(db_session)
+    deliver_service = DeliveryService(db_session)
     products = []
     for code, product_name, ean, amount, jednostka, unit_weight, location, date, reserved_amount, available_amount in params:
         products.append({'product_name': product_name, 'ean': ean, 'expected_amount': 10})
-    expiration_date = '2025-12-15'
+    expiration_date = (dt.today() + timedelta(days=90)).isoformat()
     new_amount = 10
     target_location = 'RB-01-01'
-    deliver_id = create_supplier_deliver(company_name, external_number, delivery_date)
+    deliver_id = deliver_service.create_supplier_deliver(company_name, external_number, delivery_date)
     client.post(f'/delivery/create_delivery/{deliver_id}', headers={"Authorization": f"Bearer {token}"}, json = {'products': products})
     client.post(f'/delivery/enter_ean_delivery/{deliver_id}', headers={"Authorization": f"Bearer {token}"}, json = {'ean': ean})
     client.post(f'/delivery/enter_date/{deliver_id}/{ean}', headers={"Authorization": f"Bearer {token}"}, json = {'date': expiration_date})
     client.post(f'/delivery/enter_amount_delivery/{deliver_id}/{ean}', headers={"Authorization": f"Bearer {token}"}, json = {'amount': new_amount})
     response = client.post(f'/delivery/enter_location_delivery/{deliver_id}/{ean}', headers={"Authorization": f"Bearer {token}"}, json = {'location': target_location})
-    response_data = response.get_json()
-    print(response_data)
+    response_data = response.json()
     assert response.status_code == 200
     assert response_data['message'] == 'Product accepted on location'
 
 
 @parametrize_decorator
-def test_enter_target_location_delivery_no_amount(client, token, code, product_name, ean, amount, jednostka, unit_weight, location, date, reserved_amount, available_amount):
-    prepare_db()
+def test_enter_target_location_delivery_no_amount(db_session, client, token, code, product_name, ean, amount, jednostka, unit_weight, location, date, reserved_amount, available_amount):
+    prepare_db(db_session)
+    deliver_service = DeliveryService(db_session)
     products = []
     for code, product_name, ean, amount, jednostka, unit_weight, location, date, reserved_amount, available_amount in params:
         products.append({'product_name': product_name, 'ean': ean, 'expected_amount': 10})
-    expiration_date = '2025-12-15'
+    expiration_date = (dt.today() + timedelta(days=90)).isoformat()
     new_amount = 10
     target_location = 'RB-01-01'
-    deliver_id = create_supplier_deliver(company_name, external_number, delivery_date)
+    deliver_id = deliver_service.create_supplier_deliver(company_name, external_number, delivery_date)
     client.post(f'/delivery/create_delivery/{deliver_id}', headers={"Authorization": f"Bearer {token}"}, json = {'products': products})
     client.post(f'/delivery/enter_ean_delivery/{deliver_id}', headers={"Authorization": f"Bearer {token}"}, json = {'ean': ean})
     client.post(f'/delivery/enter_date/{deliver_id}/{ean}', headers={"Authorization": f"Bearer {token}"}, json = {'date': expiration_date})
     response = client.post(f'/delivery/enter_location_delivery/{deliver_id}/{ean}', headers={"Authorization": f"Bearer {token}"}, json = {'location': target_location})
-    response_data = response.get_json()
-    print(response_data)
-    assert response.status_code == 404
-    assert response_data['message'] == 'Confirm amount'
+    response_data = response.json()
+    assert response.status_code == 400
+    assert response_data['detail'] == 'Confirm amount'

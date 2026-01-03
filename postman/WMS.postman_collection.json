@@ -1,0 +1,1673 @@
+{
+	"info": {
+		"_postman_id": "f11e901a-ed62-4358-b4c4-dc5346cb6c96",
+		"name": "WMS",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "38894958"
+	},
+	"item": [
+		{
+			"name": "Products",
+			"item": [
+				{
+					"name": "Find Product by Ean",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{TOKEN}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "",
+								"value": "",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{URL}}/products/{{ean}}",
+							"host": [
+								"{{URL}}"
+							],
+							"path": [
+								"products",
+								"{{ean}}"
+							],
+							"query": [
+								{
+									"key": null,
+									"value": null,
+									"disabled": true
+								}
+							]
+						},
+						"description": "**GET {{URL}}/products/{{EAN_code}}**\n\n**Description:**\n\nThis endpoint retrieves information about a product based on its EAN code. It returns details such as:\n\n- the product's warehouse location\n    \n- expiration date\n    \n\nIf the product is stored in multiple locations, the endpoint will return all available entries.\n\n**How to use:**\n\nReplace `{{kod_EAN}}` in the URL with the EAN code of the product you want to search for. Example:\n\n```\nGET {{URL}}/products/5901234567890\n\n ```"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Location",
+			"item": [
+				{
+					"name": "Find Product On Location",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{TOKEN}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{URL}}/location/{{location}}",
+							"host": [
+								"{{URL}}"
+							],
+							"path": [
+								"location",
+								"{{location}}"
+							]
+						},
+						"description": "**GET {{URL}}/location/{{location}}**\n\n**Description:**\n\nThis endpoint retrieves all products and their details stored at a specific warehouse location. It returns information such as:\n\n- product name or code\n    \n- quantity\n    \n- expiration date\n    \n- any other relevant details\n    \n\n**How to use:**\n\nReplace `{{location}}` in the URL with the code of the warehouse location you want to check. Example:\n\n```\nGET {{URL}}/location/A1-23\n\n ```"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Relocation",
+			"item": [
+				{
+					"name": "Move Product By EAN",
+					"item": [
+						{
+							"name": "Get products by EAN",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{TOKEN}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{URL}}/relocation/start/{{kod_EAN}}",
+									"host": [
+										"{{URL}}"
+									],
+									"path": [
+										"relocation",
+										"start",
+										"{{kod_EAN}}"
+									]
+								},
+								"description": "**Description:**  \n  \nThis endpoint allows a warehouse worker to search for all locations where a product with the specified EAN code is stored. It helps the user identify the exact location(s) of the product before starting a relocation process.\n\nThe response will include a `relocation_id`, which will be used in the subsequent relocation endpoints to track and complete the process.\n\n**How to use:**  \n  \nReplace `{{kod_EAN}}` in the URL with the EAN code of the product you want to relocate. Example:\n\n```\nGET {{URL}}/relocation/start/5901234567890\n\n ```"
+							},
+							"response": []
+						},
+						{
+							"name": "Enter Location",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{TOKEN}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"location\": \"RA-11-00\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{URL}}/relocation/enter_location/{{relocation_id}}",
+									"host": [
+										"{{URL}}"
+									],
+									"path": [
+										"relocation",
+										"enter_location",
+										"{{relocation_id}}"
+									]
+								},
+								"description": "**Description:**\n\nThis endpoint is the next step in the relocation process. In the request body, the warehouse worker must provide the chosen location.\n\nThe specified location will be saved in the `relocation` table under the row with the provided `relocation_id`.\n\nThe response will return information about all products at that location, including `product_id`, which must be used in the next step of the relocation process (sent in the request body). If you see in response \"Enter amount:\", it means, that there is only one product with such EAN in Warehouse\n\n**How to use:**\n\nReplace `{{relocation_id}}` in the URL with the relocation ID obtained from the **Start relocation** step. In the request body, provide the selected location. Example:\n\n```\nPOST {{URL}}/relocation/enter_location/123\nBody: {\n  \"location\": \"RA-01-01\"\n}\n\n ```"
+							},
+							"response": []
+						},
+						{
+							"name": "Choose Product Date",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{TOKEN}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"product_id\": 5323\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{URL}}/relocation/confirm_date/{{relocation_id}}",
+									"host": [
+										"{{URL}}"
+									],
+									"path": [
+										"relocation",
+										"confirm_date",
+										"{{relocation_id}}"
+									]
+								},
+								"description": "**Description:**  \n  \nThis endpoint is used to confirm which product will be relocated. The warehouse worker must provide the `product_id` in the request body, which was returned in the response of the previous step (**Enter relocation location**).\n\nThe `relocation_id` in the URL should be the same ID used in the previous relocation steps. This ensures the action is applied to the correct relocation process.\n\n**How to use:**  \n  \nReplace `{{relocation_id}}` in the URL with the relocation ID from previous steps. Include the `product_id` in the request body. Example:\n\n```\nPOST {{URL}}/relocation/confirm_date/123\nBody: {\n  \"product_id\": 456\n}\n\n ```"
+							},
+							"response": []
+						},
+						{
+							"name": "Enter Amount",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{TOKEN}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"amount\": 74\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{URL}}/relocation/confirm_amount/{{relocation_id}}",
+									"host": [
+										"{{URL}}"
+									],
+									"path": [
+										"relocation",
+										"confirm_amount",
+										"{{relocation_id}}"
+									]
+								},
+								"description": "**Description:**  \n  \nThis endpoint is used to specify the quantity of the selected product to be relocated.\n\nThe `relocation_id` in the URL should be the same ID used in the previous relocation steps. In the request body, provide the quantity of the product you want to move, using the same format as in the previous steps.\n\n**How to use:**  \n  \nReplace `{{relocation_id}}` in the URL with the relocation ID from previous steps. Include the desired quantity in the request body. Example:\n\n```\nPOST {{URL}}/relocation/confirm_amount/123\nBody: {\n  \"quantity\": 10\n}\n\n ```"
+							},
+							"response": []
+						},
+						{
+							"name": "Confirm_target_location",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{TOKEN}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"location\": \"RL-03-00\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{URL}}/relocation/confirm_target_location/{{relocation_id}}",
+									"host": [
+										"{{URL}}"
+									],
+									"path": [
+										"relocation",
+										"confirm_target_location",
+										"{{relocation_id}}"
+									]
+								},
+								"description": "**Description:**  \n  \nThis endpoint is used to specify the target location for the product being relocated.\n\nThe `relocation_id` in the URL should be the same ID used in the previous relocation steps. In the request body, provide one of the valid warehouse locations where the product will be moved, following the same format as in the previous steps.\n\n**How to use:**  \n  \nReplace `{{relocation_id}}` in the URL with the relocation ID from previous steps. Include the chosen target location in the request body. Example:\n\n```\nPOST {{URL}}/relocation/confirm_target_location/123\nBody: {\n  \"target_location\": \"B2-15\"\n}\n\n ```"
+							},
+							"response": []
+						}
+					],
+					"description": "**Description:**  \n  \nThis folder contains endpoints for relocating products by their EAN code. Each relocation process moves a product from one warehouse location to another and is tracked with a unique ID in the `relocation` table.\n\nThe relocation process is divided into multiple steps. All relocations should start with the **Get products by EAN** function, followed by the subsequent steps to complete the process.\n\nEndFragment"
+				},
+				{
+					"name": "Move Product by Location",
+					"item": [
+						{
+							"name": "Get Products on Location",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{TOKEN}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{URL}}/relocation/relocate_by_location/\"location\"",
+									"host": [
+										"{{URL}}"
+									],
+									"path": [
+										"relocation",
+										"relocate_by_location",
+										"\"location\""
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Confirm Ean",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{TOKEN}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"ean\": \"5903364108465\"\r\n}"
+								},
+								"url": {
+									"raw": "{{URL}}/relocation/enter_ean/\"relocation_id\"",
+									"host": [
+										"{{URL}}"
+									],
+									"path": [
+										"relocation",
+										"enter_ean",
+										"\"relocation_id\""
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Choose Product Date",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{TOKEN}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"product_id\": 5323\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{URL}}/relocation/confirm_date/\"relocation_id\"",
+									"host": [
+										"{{URL}}"
+									],
+									"path": [
+										"relocation",
+										"confirm_date",
+										"\"relocation_id\""
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Enter Amount",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{TOKEN}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"amount\": 95\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{URL}}/relocation/confirm_amount/\"relocation_id\"",
+									"host": [
+										"{{URL}}"
+									],
+									"path": [
+										"relocation",
+										"confirm_amount",
+										"\"relocation_id\""
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Confirm target location",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{TOKEN}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"location\": \"RH-03-01\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{URL}}/relocation/confirm_target_location/\"relocation_id\"",
+									"host": [
+										"{{URL}}"
+									],
+									"path": [
+										"relocation",
+										"confirm_target_location",
+										"\"relocation_id\""
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "User",
+			"item": [
+				{
+					"name": "Register user",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"user_id\": \"AA\",\r\n    \"user_name\": \"Anonimowy Alkoholik\",\r\n    \"password\": \"1\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{URL}}/authentication/register",
+							"host": [
+								"{{URL}}"
+							],
+							"path": [
+								"authentication",
+								"register"
+							]
+						},
+						"description": "**Description:**\n\nThis endpoint allows you to create a new user account. Provide the required data in the request body according to the specified arguments.\n\n- `user_id` must be **2 characters long**\n    \n- `password` must be **no more than 4 characters**\n    \n\n**How to use:**\n\nInclude the user credentials in the request body. Example:\n\n```\nPOST {{URL}}/authentication/register\nBody: {\n  \"user_id\": \"AB\",\n  \"password\": \"1234\"\n}\n\n ```"
+					},
+					"response": []
+				},
+				{
+					"name": "Log in",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.environment.set(\"TOKEN\", pm.response.json().token);"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"user_id\": \"KS\",\r\n    \"password\": \"1\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{URL}}/authentication/login",
+							"host": [
+								"{{URL}}"
+							],
+							"path": [
+								"authentication",
+								"login"
+							]
+						},
+						"description": "**Description:**  \n  \nThis endpoint allows a user to log in. Provide the credentials of a user that has already been registered in the database.\n\nIf you just registered a new user, use the following example credentials:\n\n- `user_id`: `KS`\n    \n- `password`: `1`\n    \n\n**How to use:**  \n  \nInclude the user credentials in the request body. Example:\n\n```\nPOST {{URL}}/authentication/login\nBody: {\n  \"user_id\": \"KS\",\n  \"password\": \"1\"\n}\n\n ```"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Execute order",
+			"item": [
+				{
+					"name": "Start Order",
+					"item": [
+						{
+							"name": "Start Order",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{TOKEN}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{URL}}/execute_order/start_order/{{order_id}}",
+									"host": [
+										"{{URL}}"
+									],
+									"path": [
+										"execute_order",
+										"start_order",
+										"{{order_id}}"
+									]
+								},
+								"description": "**Description:**  \n  \nThis endpoint initiates the order execution process.  \n  \nIn the URL, provide the `order_id` of the order you selected earlier.\n\nThe response will display the first product to be picked, along with its details.  \n  \nThese product details will be required in the following steps of the order execution process.\n\n💡 Tip: It’s recommended **not to close the response window**, as it contains important information for the next steps.\n\n**How to use:**  \n  \nReplace `{{order_id}}` in the URL with the ID of the order you want to start. Example:\n\n```\nPOST {{URL}}/execute_order/start_order/789\n\n ```"
+							},
+							"response": []
+						},
+						{
+							"name": "Confirm Location",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{TOKEN}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"location\": \"RG-15-01\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{URL}}/execute_order/confirm_location/{{order_id}}",
+									"host": [
+										"{{URL}}"
+									],
+									"path": [
+										"execute_order",
+										"confirm_location",
+										"{{order_id}}"
+									]
+								},
+								"description": "**Description:**\n\nThis endpoint is used to confirm the location of the currently picked product.\n\nThe location should match the one shown in the response of the **Start Order** or **Get Next Product** function.\n\nThe `order_id` in the URL must correspond to the order being executed.\n\nIn the request body, provide the confirmed location.\n\n**How to use:**\n\nReplace `{{order_id}}` in the URL with the correct order ID.\n\nIn the body, enter the location as shown in the previous step. Example:\n\n```\nPOST {{URL}}/execute_order/confirm_location/789\nBody: {\n  \"location\": \"RA-01-01\"\n}\n\n ```"
+							},
+							"response": []
+						},
+						{
+							"name": "Confim Ean",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{TOKEN}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"ean\": \"5123456791449\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{URL}}/execute_order/confirm_ean/{{order_id}}",
+									"host": [
+										"{{URL}}"
+									],
+									"path": [
+										"execute_order",
+										"confirm_ean",
+										"{{order_id}}"
+									]
+								},
+								"description": "**Description:**  \n  \nThis function confirms the **EAN code** of the currently picked product.  \n  \nIn a real warehouse workflow, the operator scans the product’s barcode (EAN) to verify that the correct item has been selected.\n\nThe endpoint requires:\n\n- a valid **`order_id`** (from previous steps such as _Start Order_ or _Get Next Product_),\n    \n- the **EAN code** of the product provided in the **body**, which was shown in the _Confirm Location_ response.\n    \n\n**Request Body (JSON):**\n\n```\n{\n  \"ean\": \"1234567890123\"\n}\n\n ```"
+							},
+							"response": []
+						},
+						{
+							"name": "Confirm amount",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{TOKEN}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"amount\": 13\r\n}"
+								},
+								"url": {
+									"raw": "{{URL}}/execute_order/confirm_amount/{{order_id}}",
+									"host": [
+										"{{URL}}"
+									],
+									"path": [
+										"execute_order",
+										"confirm_amount",
+										"{{order_id}}"
+									]
+								},
+								"description": "**Description:**  \n  \nThis function confirms that the warehouse operator has picked the **correct quantity** of the product.  \n  \nThe required amount is shown in the response of **Start Order** or **Get Next Product**.\n\nThe endpoint requires:\n\n- a valid **`order_id`** (the current order being executed),\n    \n- the **confirmed quantity** in the **request body**.\n    \n\n**Request Body (JSON):**\n\n```\n{\n  \"amount\": 10\n}\n\n ```"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Next Product",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{TOKEN}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{URL}}/execute_order/get_next_product/{{order_id}}",
+									"host": [
+										"{{URL}}"
+									],
+									"path": [
+										"execute_order",
+										"get_next_product",
+										"{{order_id}}"
+									]
+								},
+								"description": "**Description:**  \n  \nThis function retrieves the **next product to be picked** in the order.  \n  \nIt should be called **after confirming the correct quantity** of the previous product.\n\nThe response will display the details of the product that needs to be collected in the next step.\n\n**How to use:**  \n  \nReplace `{{order_id}}` in the URL with the ID of the current order. Example:\n\n```\nGET {{URL}}/execute_order/get_next_product/789\n\n ```"
+							},
+							"response": []
+						},
+						{
+							"name": "Show Done Products",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{TOKEN}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{URL}}/execute_order/show_done_products/{{order_id}}",
+									"host": [
+										"{{URL}}"
+									],
+									"path": [
+										"execute_order",
+										"show_done_products",
+										"{{order_id}}"
+									]
+								},
+								"description": "**Description:**  \n  \nThis function displays all products that have been collected so far for the specified order.  \n  \nIt allows the warehouse worker to review which items have already been picked.\n\nThe `order_id` in the URL should correspond to the current order being executed.\n\n**How to use:**  \n  \nReplace `{{order_id}}` in the URL with the ID of the order. Example:\n\n```\nGET {{URL}}/execute_order/show_done_products/789\n\n ```"
+							},
+							"response": []
+						}
+					],
+					"description": "**Description:**\n\nThis section contains endpoints used for executing an order.\n\nThe process should be carried out step by step, following the sequence indicated by the system.\n\nMessages and instructions for the next steps will be displayed in the response after each request.\n\nAlways begin the order execution with the **Start Order** function"
+				},
+				{
+					"name": "Reverse Picked Product",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{TOKEN}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"product_id\": 43\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{URL}}/execute_order/reverse_product/{{order_id}}",
+							"host": [
+								"{{URL}}"
+							],
+							"path": [
+								"execute_order",
+								"reverse_product",
+								"{{order_id}}"
+							]
+						},
+						"description": "**Description:**\n\nThis endpoint is used during the order execution process to remove a product from the list of already collected items.\n\nIt is typically used when a warehouse worker realizes that a product was picked incorrectly (e.g., wrong expiration date) or is damaged. Using this function ensures that the specified quantity of the product is not deducted from the inventory.\n\nThe `order_id` in the URL should correspond to the order being processed. In body You have to use product_id\n\n**How to use:**\n\nReplace `{{order_id}}` in the URL with the ID of the order. Example:\n\n```\nPOST {{URL}}/execute_order/reverse_product/789\n\n ```"
+					},
+					"response": []
+				},
+				{
+					"name": "Order choice",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{TOKEN}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{URL}}/execute_order/order_choice",
+							"host": [
+								"{{URL}}"
+							],
+							"path": [
+								"execute_order",
+								"order_choice"
+							]
+						},
+						"description": "**Description:**  \n  \nThis endpoint returns a list of all orders that are ready to be executed.\n\nThe response includes key details for each order, such as:\n\n- `order_id` – the main identifier used throughout the entire order execution process\n    \n- total quantity to pick\n    \n- buyer information\n    \n- estimated total weight of all products in the order\n    \n\nUse this function to choose which order you want to start processing.\n\n**How to use:**  \n  \nSimply send a `GET` request to view all available orders ready for execution. Example:\n\n```\nGET {{URL}}/execute_order/order_choice\n\n ```"
+					},
+					"response": []
+				},
+				{
+					"name": "Check order details",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{TOKEN}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{URL}}/execute_order/check_order/{{order_id}}",
+							"host": [
+								"{{URL}}"
+							],
+							"path": [
+								"execute_order",
+								"check_order",
+								"{{order_id}}"
+							]
+						},
+						"description": "**Description:**  \n  \nThis endpoint displays detailed information about a specific order.  \n  \nIt shows all products that need to be picked along with their required quantities.\n\nThe `order_id` in the URL identifies which order’s details will be retrieved.\n\n**How to use:**  \n  \nReplace `{{order_id}}` in the URL with the ID of the order you want to check. Example:\n\n```\nGET {{URL}}/execute_order/check_order/789\n\n ```"
+					},
+					"response": []
+				}
+			],
+			"description": "**Description:**  \n  \nThis folder contains endpoints for executing orders that have already been entered into the system. The order execution process is divided into sequential steps.\n\nEach warehouse action involves:\n\n- confirming the product location,\n    \n- confirming the EAN code,\n    \n- optionally confirming the expiration date (if the same product exists at the location with different dates),\n    \n- and finally confirming the quantity.\n    \n\nIt is recommended to start the process with the **Order Choice** function to check which orders are ready to be executed. The **Check order details** function allows you to see which products need to be picked for each order.\n\nTip: choose orders with the smallest quantities first, as processing large orders can be time-consuming."
+		},
+		{
+			"name": "Delivery",
+			"item": [
+				{
+					"name": "Execute Delivery",
+					"item": [
+						{
+							"name": "Check Deliver",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{TOKEN}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{URL}}/delivery/check_delivery/{{deliver_id}}",
+									"host": [
+										"{{URL}}"
+									],
+									"path": [
+										"delivery",
+										"check_delivery",
+										"{{deliver_id}}"
+									]
+								},
+								"description": "**Description:**  \n  \nThis function displays the details of a delivery based on the specified `deliver_id`.  \n  \nIt shows which items need to be received and their respective quantities.\n\n💡 **Tip:** It is recommended **not to close the response window**, as the information from the response will be needed for the next steps of the delivery process.\n\nThe `deliver_id` in the URL should correspond to the delivery you want to process.\n\n**How to use:**  \n  \nReplace `{{deliver_id}}` in the URL with the ID of the delivery. Example:\n\n```\nGET {{URL}}/delivery/check_delivery/301\n\n ```"
+							},
+							"response": []
+						},
+						{
+							"name": "Enter Ean from Deliver",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{TOKEN}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"ean\": \"5905669479233\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{URL}}/delivery/enter_ean_delivery/{{deliver_id}}",
+									"host": [
+										"{{URL}}"
+									],
+									"path": [
+										"delivery",
+										"enter_ean_delivery",
+										"{{deliver_id}}"
+									]
+								},
+								"description": "**Description:**  \n  \nThis function confirms the receipt of a product based on its **EAN code(must consist of 13 digit)**.\n\nThe endpoint requires:\n\n- a valid **`deliver_id`** in the URL corresponding to the delivery being processed\n    \n- the **EAN code** of the product to be received in the request body\n    \n\n**Request Body Example:**\n\n```\n{\n  \"ean\": \"1234567890123\"\n}\n\n ```"
+							},
+							"response": []
+						},
+						{
+							"name": "Enter Date",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{TOKEN}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"date\": \"2026-02-20\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{URL}}/delivery/enter_date/{{deliver_id}}/{{kod_EAN}}",
+									"host": [
+										"{{URL}}"
+									],
+									"path": [
+										"delivery",
+										"enter_date",
+										"{{deliver_id}}",
+										"{{kod_EAN}}"
+									]
+								},
+								"description": "**Description:**\n\nThis function sets the **expiration date** (or relevant date) for a product in the delivery.\n\nThe endpoint requires:\n\n- the correct **`deliver_id`** in the URL\n    \n- the **EAN code** of the product from the previous step (_Enter EAN From Delivery_) in the URL\n    \n- the **date** in the request body in `YYYY-MM-DD` format\n    \n\n**Request Body Example:**\n\n```\n{\n  \"date\": \"2025-12-31\"\n}\n\n ```\n\nReplace `{{deliver_id}}` and `{{kod_EAN}}` in the URL with the appropriate delivery ID and product EAN. Example:\n\n```\nPOST {{URL}}/delivery/enter_date/301/1234567890123\nBody: {\n  \"date\": \"2025-12-31\"\n}\n\n ```"
+							},
+							"response": []
+						},
+						{
+							"name": "Enter amount of product",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{TOKEN}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"amount\": 160,\r\n    \"force\": true\r\n}"
+								},
+								"url": {
+									"raw": "{{URL}}/delivery//enter_amount_delivery/{{order_id}}/{{kod_EAN}}",
+									"host": [
+										"{{URL}}"
+									],
+									"path": [
+										"delivery",
+										"",
+										"enter_amount_delivery",
+										"{{order_id}}",
+										"{{kod_EAN}}"
+									]
+								},
+								"description": "**Description:**  \n  \nThis function sets the **quantity of a product** to be received according to the amount shown in the **Check Delivery** response.\n\nIf you want to receive **more than the planned quantity**, include the argument `\"force\": true` in the request body.\n\nThe endpoint requires:\n\n- the correct **`deliver_id`** in the URL\n    \n- the **EAN code** of the product in the URL\n    \n- the **quantity** to be received in the request body\n    \n\nStartFragment\n\n**How to use:**  \n  \nReplace `{{deliver_id}}` and `{{kod_EAN}}` in the URL with the appropriate delivery ID and product EAN. Example:\n\n```\nPOST {{URL}}/delivery/enter_amount_delivery/301/1234567890123\nBody: {\n  \"quantity\": 10,\n  \"force\": true\n}\n\n ```\n\nEndFragment"
+							},
+							"response": []
+						},
+						{
+							"name": "Enter target location",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{TOKEN}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"location\": \"RK-18-00\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{URL}}/delivery/enter_location_delivery/{{deliver_id}}/{{kod_EAN}}",
+									"host": [
+										"{{URL}}"
+									],
+									"path": [
+										"delivery",
+										"enter_location_delivery",
+										"{{deliver_id}}",
+										"{{kod_EAN}}"
+									]
+								},
+								"description": "**Description:**  \n  \nThis function sets the **warehouse location** where the received product will be stored.\n\nThe endpoint requires:\n\n- the correct **`deliver_id`** in the URL\n    \n- the **EAN code** of the product in the URL\n    \n- the **location** in the request body, which must exist in the database\n    \n\n**How to use:**  \n  \nReplace `{{deliver_id}}` and `{{kod_EAN}}` in the URL with the appropriate delivery ID and product EAN. Example:\n\n```\nPOST {{URL}}/delivery/enter_location_delivery/301/1234567890123\nBody: {\n  \"location\": \"A1-23\"\n}\n\n ```"
+							},
+							"response": []
+						}
+					],
+					"description": "**Description:**\n\nThis folder contains endpoints for **executing a supplier delivery**.\n\nThe delivery process is carried out in several sequential steps.\n\nIt is recommended to start with the **Check Deliver** function, using the selected `deliver_id` to begin processing the delivery.\n\nEach step of the process should be followed in order to ensure that all products are correctly received and recorded"
+				},
+				{
+					"name": "Create delivery",
+					"item": [
+						{
+							"name": "Create Supplier Delivery document",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{TOKEN}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"supplier\" : \"Exotic Liquids\",\r\n    \"deliver_external_number\" : \"ZO/2000123/2025\",\r\n    \"delivery_date\" : \"2025-12-31\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{URL}}/delivery/create_supplier_delivery",
+									"host": [
+										"{{URL}}"
+									],
+									"path": [
+										"delivery",
+										"create_supplier_delivery"
+									]
+								},
+								"description": "**Description:**  \n  \nThis function creates a **supplier delivery document**, assigns it a `deliver_id`, and links it to a supplier as specified in the request body.\n\nIn the body, you must provide:\n\n- `\"supplier\"` – the supplier must exist in the `suppliers` table\n    \n- `\"deliver_external_number\"` – optional, can be assigned freely\n    \n- `\"delivery_date\"` – optional, can be assigned freely\n    \n\nThe response will include a newly generated `deliver_id`, which should be used in the **Create Delivery Details Document** function.\n\n**Request Body Example:**\n\n```\n{\n  \"supplier\": \"Exotic Liquids\",\n  \"deliver_external_number\": \"ZO/2000123/2025\",\n  \"delivery_date\": \"2025-12-31\"\n}\n\n ```"
+							},
+							"response": []
+						},
+						{
+							"name": "Create Delivery Details document",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{TOKEN}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"products\": [\r\n        {\r\n            \"product_name\": \"TRZECH KUMPLI MISTY BUT. 0,5 L\",\r\n            \"ean\": \"5905669479189\",\r\n            \"expected_amount\": 100\r\n        },\r\n        {\r\n            \"product_name\": \"TRZECH KUMPLI PILS BUT. 0,5 L\",\r\n            \"ean\": \"5905669479233\",\r\n            \"expected_amount\": 200\r\n        },\r\n        {\r\n            \"product_name\": \"TRZECH KUMPLI CALIFIA BUT. 0,5 L\",\r\n            \"ean\": \"5905669479264\",\r\n            \"expected_amount\": 150\r\n        }\r\n    ]\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{URL}}/delivery/create_delivery/\"deliver_id\"",
+									"host": [
+										"{{URL}}"
+									],
+									"path": [
+										"delivery",
+										"create_delivery",
+										"\"deliver_id\""
+									]
+								}
+							},
+							"response": []
+						}
+					],
+					"description": "**Description:**  \n  \nThis function is used to **create a new delivery to be received**.\n\nThe process should start with the **Create Supplier Delivery Document** function, which will:\n\n- generate a `deliver_id`\n    \n- select the supplier\n    \n\nA new record with the generated `deliver_id` will be created in the `delivery_order` table.\n\nNext, proceed to **Create Delivery Details Document**, where you will use the previously generated `deliver_id` to add products and details for the delivery."
+				},
+				{
+					"name": "Check available deliver",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{TOKEN}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{URL}}/delivery/check_supplier_deliver",
+							"host": [
+								"{{URL}}"
+							],
+							"path": [
+								"delivery",
+								"check_supplier_deliver"
+							]
+						},
+						"description": "**Description:**  \n  \nThis function retrieves a list of **available supplier deliveries** that are ready to be processed.  \n  \nIt allows the warehouse worker to see which deliveries can be received and acted upon.\n\n**How to use:**  \n  \nSimply send a `GET` request to view all pending deliveries. Example:\n\n```\nGET {{URL}}/delivery/check_supplier_deliver\n\n ```"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Add service",
+			"item": [
+				{
+					"name": "Add product to database",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{TOKEN}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"product_name\": \"PINTA Bright Side can 0,5 L\",\r\n    \"code\": \"PIN_BR_SI_CAN_500\",\r\n    \"ean\": \"5903314870787\",\r\n    \"unit_weight\": 0.54,\r\n    \"purchase_price\": 5.45\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{URL}}/add_to_base/add_product",
+							"host": [
+								"{{URL}}"
+							],
+							"path": [
+								"add_to_base",
+								"add_product"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Add customer to database",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{TOKEN}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"customer_id\" : \"JABEX\",\r\n    \"company_name\": \"JABEX\",\r\n    \"contact_name\": \"Lepek\",\r\n    \"contact_title\": \"MR\",\r\n    \"address\": \"Bestwinska\",\r\n    \"city\": \"Bielsko\",\r\n    \"region\": \"slask\",\r\n    \"postal_code\": \"33-400\",\r\n    \"country\": \"Poland\",\r\n    \"phone\": \"7777777\",\r\n    \"fax\": \"999999\"\r\n}"
+						},
+						"url": {
+							"raw": "{{URL}}/add_to_base/add_customer",
+							"host": [
+								"{{URL}}"
+							],
+							"path": [
+								"add_to_base",
+								"add_customer"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Add supplier to database",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{TOKEN}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"company_name\": \"JABEX\",\r\n    \"contact_name\": \"Lepek\",\r\n    \"contact_title\": \"MR\",\r\n    \"address\": \"Bestwinska\",\r\n    \"city\": \"Bielsko\",\r\n    \"region\": \"slask\",\r\n    \"postal_code\": \"33-400\",\r\n    \"country\": \"Poland\",\r\n    \"phone\": \"7777777\",\r\n    \"fax\": \"999999\",\r\n    \"homepage\": \"www.andrzej.pl\"\r\n}"
+						},
+						"url": {
+							"raw": "{{URL}}/add_to_base/add_supplier",
+							"host": [
+								"{{URL}}"
+							],
+							"path": [
+								"add_to_base",
+								"add_supplier"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Create order",
+			"item": [
+				{
+					"name": "Create own order",
+					"item": [
+						{
+							"name": "Generate new order_id",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{TOKEN}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{URL}}/create_order/generate_new_order_id",
+									"host": [
+										"{{URL}}"
+									],
+									"path": [
+										"create_order",
+										"generate_new_order_id"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Make empty order",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{TOKEN}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{URL}}/create_order/make_order/ZO-003-12-2025",
+									"host": [
+										"{{URL}}"
+									],
+									"path": [
+										"create_order",
+										"make_order",
+										"ZO-003-12-2025"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Choose customer",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{TOKEN}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"company_name\": \"Around the Horn\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{URL}}/create_order/choose_customer_for_order/ZO-003-12-2025",
+									"host": [
+										"{{URL}}"
+									],
+									"path": [
+										"create_order",
+										"choose_customer_for_order",
+										"ZO-003-12-2025"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Add product to order",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{TOKEN}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"ean\": \"5906591002995\",\r\n    \"amount\": 5\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{URL}}/create_order/add_product/ZO-003-12-2025",
+									"host": [
+										"{{URL}}"
+									],
+									"path": [
+										"create_order",
+										"add_product",
+										"ZO-003-12-2025"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Finish order",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{TOKEN}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{URL}}/create_order/finish_order/ZO-003-12-2025",
+									"host": [
+										"{{URL}}"
+									],
+									"path": [
+										"create_order",
+										"finish_order",
+										"ZO-003-12-2025"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Create Random Order",
+					"request": {
+						"method": "GET",
+						"header": []
+					},
+					"response": []
+				},
+				{
+					"name": "Cancel order",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{TOKEN}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"ean\": \"5123456791154\",\r\n    \"amount\": 5\r\n}"
+						},
+						"url": {
+							"raw": "{{URL}}/create_order/cancel_order/ZO-003-12-2025",
+							"host": [
+								"{{URL}}"
+							],
+							"path": [
+								"create_order",
+								"cancel_order",
+								"ZO-003-12-2025"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}

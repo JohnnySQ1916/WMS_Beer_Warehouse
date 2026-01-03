@@ -1,38 +1,65 @@
 import pytest
-from app import create_app, db
+from app.database.database import get_db
 from sqlalchemy import text
+from fastapi.testclient import TestClient
+from app.main import app as fastapi_app
+from app.database.database import TestSessionLocal, test_engine
+from app.database.base import Base
 
-@pytest.fixture
-def app():
-    app = create_app('testing')
+# Tworzenie struktury tabel dla testów
+@pytest.fixture(scope="function", autouse= True)
+def test_db_setup():
+    Base.metadata.create_all(bind=test_engine)
+    yield
+    Base.metadata.drop_all(bind=test_engine)
 
-    with app.app_context():
-        db.drop_all()
-        db.create_all()
-        yield app
-        db.session.remove()
-        db.drop_all()
+# Sesja DB — taka sama jak w projekcie
+@pytest.fixture(scope="function")
+def db_session():
+    connection = test_engine.connect()
+    transaction = connection.begin()
+    session = TestSessionLocal(bind=connection)
+    try:
+        yield session
+    finally:
+        session.close()
+        transaction.rollback()
+        connection.close()
 
-    
-@pytest.fixture
-def client(app):
-    return app.test_client()
+# Testowy klient FastAPI
+@pytest.fixture(scope="function")
+def client(db_session):
+    def override_get_db():
+        try:
+            yield db_session
+        finally:
+            pass
+    fastapi_app.dependency_overrides[get_db] = override_get_db
+    with TestClient(fastapi_app) as c:
+        yield c
 
-@pytest.fixture
-def db_session(app):
-    with app.app_context():
-        yield db.session
-        db.session.rollback()
+    fastapi_app.dependency_overrides.clear()
 
-
-@pytest.fixture
+# Tworzenie użytkownika
+@pytest.fixture(scope="function")
 def user(client):
-    user = {'user_id': 'ks', 'user_name':'test_user', 'password':'test'}
-    client.post('/authentication/register', json = user)
-    return user
+    user_data = {
+        "user_id": "ks",
+        "user_name": "test_user",
+        "password": "test"
+    }
+    response = client.post("/authentication/register", json=user_data)
+    assert response.status_code in (200, 201)
+    return user_data
 
-
-@pytest.fixture
+# Pobranie tokena dla testów
+@pytest.fixture(scope="function")
 def token(client, user):
-    response = client.post('/authentication/login', json= {'user_id': user['user_id'], 'password': user['password']})
-    return response.get_json()['token']
+    response = client.post(
+        "/authentication/login",
+        json={"user_id": user["user_id"], "password": user["password"]}
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert "token" in data
+    return data["token"]

@@ -1,13 +1,13 @@
-from flask import Blueprint, jsonify, request
-from app.warehouse_operations.location_operations import find_product_by_location
-from app.utils import token_required
+from app.warehouse_operations.location_operations import LocationService
+from fastapi import APIRouter, Depends, HTTPException
+from app.database.database import get_db
+from sqlalchemy.orm import Session
+from app.utils import get_current_user
 
-location_bp = Blueprint('location', __name__, url_prefix='/location')
+router = APIRouter(prefix='/location', tags = ['Location'])
 
-@token_required
-@location_bp.route('/<string:location>', methods = ['GET'])
-def get_products_on_location(location):
-    locat = find_product_by_location(location)
-    if locat:
-        return jsonify(locat)
-    return jsonify({'error': 'Location not found'}), 404
+@router.get('/{location}')
+def get_products_on_location(location: str, db: Session = Depends(get_db), current_user= Depends(get_current_user)):
+    service = LocationService(db)
+    locat = service.find_product_by_location(location)
+    return locat

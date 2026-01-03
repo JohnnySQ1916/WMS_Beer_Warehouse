@@ -1,6 +1,5 @@
-from app.database.database import db
 from sqlalchemy import text
-from app.tests.conftest import app, db_session, client, token
+from app.tests.conftest import db_session, client, token
 import pytest
 from app.routes.location_operation_routes import get_products_on_location
 from functools import wraps
@@ -22,32 +21,32 @@ def parametrize_decorator(func):
     return wrapper
 
 
-def prepare_db():
+def prepare_db(db_session):
     for code, product_name, ean, amount, jednostka, unit_weight, location, date, reserved_amount, available_amount in params:
-        db.session.execute(text("""INSERT INTO products (code, product_name, ean, amount, jednostka, unit_weight, location, date, reserved_amount, available_amount)
+        db_session.execute(text("""INSERT INTO products (code, product_name, ean, amount, jednostka, unit_weight, location, date, reserved_amount, available_amount)
                                 VALUES (:code, :product_name, :ean, :amount, :jednostka, :unit_weight, :location, :date, :reserved_amount, :available_amount)"""),
                                 {'code': code, 'product_name': product_name, 'ean': ean, 'amount': amount, 'jednostka': jednostka, 'unit_weight': unit_weight, 
                                 'location': location, 'date': date, 'reserved_amount': reserved_amount, 'available_amount': available_amount})
-        db.session.execute(text("""INSERT INTO product_details (product_name, code, ean, purchase_price, unit_weight) 
+        db_session.execute(text("""INSERT INTO product_details (product_name, code, ean, purchase_price, unit_weight) 
                                 VALUES (:product_name, :code, :ean, :purchase_price, :unit_weight)"""), {'product_name': product_name,'code': code,
         'ean': ean,'purchase_price': 10, 'unit_weight': unit_weight})
-        db.session.execute(text("""INSERT INTO reservation (product_name, ean, amount, reserved_amount, available_amount)
+        db_session.execute(text("""INSERT INTO reservation (product_name, ean, amount, reserved_amount, available_amount)
                                 VALUES (:product_name, :ean, :amount, :reserved_amount, :available_amount)"""),
                                 {'product_name': product_name, 'ean': ean, 'amount': amount, 'reserved_amount': reserved_amount, 'available_amount': available_amount})
     for customer_id, company_name, contact_name, contact_title, address, city, postal_code, country, phone, fax in customers:
-        db.session.execute(text("""INSERT INTO customers (customer_id, company_name, contact_name, contact_title, address, city, postal_code, country, phone, fax)
+        db_session.execute(text("""INSERT INTO customers (customer_id, company_name, contact_name, contact_title, address, city, postal_code, country, phone, fax)
                                 VALUES (:customer_id, :company_name, :contact_name, :contact_title, :address, :city, :postal_code, :country, :phone, :fax)"""),
                                 {'customer_id': customer_id, 'company_name': company_name, 'contact_name': contact_name, 'contact_title': contact_title, 
                                  'address': address, 'city': city, 'postal_code': postal_code, 'country': country, 'phone': phone, 'fax': fax})    
-    db.session.commit()
+    db_session.commit()
 
 
 @parametrize_decorator
-def test_get_product_by_ean(db_session, client, code, product_name, ean, amount, jednostka, unit_weight, location, date, reserved_amount, available_amount):
-    prepare_db()
+def test_get_product_by_ean(db_session, client, token, code, product_name, ean, amount, jednostka, unit_weight, location, date, reserved_amount, available_amount):
+    prepare_db(db_session)
     response = client.get(f'/products/{ean}', headers={"Authorization": f"Bearer {token}"})
     product = [{'code': code, 'product_name': product_name, 'amount': amount, 'jednostka': jednostka, 
                'location': location, 'date': date}]
-    print(response.get_json())
-    assert response.get_json() == product
+    print(response.json())
+    assert response.json() == product
     

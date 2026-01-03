@@ -1,112 +1,170 @@
 from marshmallow import Schema, fields, validates, ValidationError, validates_schema, validate
-from app.database.database import db
 from sqlalchemy.sql import text
-import datetime
+from datetime import date
 from werkzeug.security import check_password_hash
+from pydantic import BaseModel, field_validator
+from pydantic_core.core_schema import FieldValidationInfo
+from fastapi import  Depends
+from typing import List
+from sqlalchemy.orm import Session
+from decimal import Decimal
 
-class EanSchema(Schema):
-    ean = fields.Str(required=True)
+class EanSchema(BaseModel):
+    ean : str
 
-    @validates('ean')
-    def validate_ean(self, value, **kwargs):
+    @field_validator('ean')
+    def validate_ean(cls, value):
         if not value.isdigit() or len(value) != 13:
-            raise ValidationError('EAN has to be consist of 13 character')
-        
-class LocationSchema(Schema):
-    location = fields.Str(required=True)
-
-    @validates('location')
-    def validate_location(self, value,**kwargs):
-        query = text('SELECT 1 FROM location_weights WHERE location = :loc LIMIT 1')
-        result = db.session.execute(query, {'loc': value}).fetchone()
-        if not result:
-            raise ValidationError('Entered location doesnt exist')
-        
-class AmountSchema(Schema):
-    amount = fields.Int(required=True)
-    force = fields.Boolean(load_default=False)
-
-    @validates('amount')
-    def validate_amount(self, value, **kwargs):
-        if value <= 0:
-            raise ValidationError('Amount has to be over 0')
-        
-class DateSchema(Schema):
-    date = fields.Date(required=True)
-
-    @validates('date')
-    def validate_date(self, value, **kwargs):
-        if value <= datetime.date.today():
-            raise ValidationError('Date has to be bigger than today')
-        
-class ChooseProductSchema(Schema):
-    product_id = fields.Int(required=True)
-
-class AuthRegisterSchema(Schema):
-    user_id = fields.Str(required=True)
-    user_name = fields.Str(required=True)
-    password = fields.Str(required = True, load_only=True, validate=validate.Length(min=1, max=4))
-
-    @validates('user_id')
-    def validate_user_id(self, value, **kwargs):
-        if len(value) != 2:
-            raise ValidationError('User_id is the persons initials')
-        user = db.session.execute(text('SELECT 1 FROM users WHERE user_id = :value'), {'value': value}).scalar()
-        if not user:
-            raise ValidationError('There is not such user in datas')
+            raise ValueError('EAN has to be consist of 13 character')
+        return value
     
-    @validates_schema
-    def validate_password(self, data, **kwargs):
-        user_id = data.get('user_id')
-        password = data.get('password')
-        if len(password)< 1 or len(password)> 4:
-            raise ValidationError('Password has to be over than 0 charackter and below 4')
-        result = db.session.execute(text('SELECT password FROM users WHERE user_id = :user_id'), {'user_id': user_id}).scalar()
-        if not result or check_password_hash(password, result):
-            raise ValidationError('Wrong password')
-        
-class AuthLoginSchema(Schema):
-    user_id = fields.Str(required=True)
-    password = fields.Str(required = True, load_only=True, validate=validate.Length(min=1, max=4))
+class ProductSchema(BaseModel):
+    product_name: str
+    code: str
+    ean : str
+    unit_weight: Decimal
+    purchase_price: Decimal
 
-    @validates('user_id')
-    def validate_user_id(self, value, **kwargs):
-        if len(value) != 2:
-            raise ValidationError('User_id is the persons initials')
-        user = db.session.execute(text('SELECT 1 FROM users WHERE user_id = :value'), {'value': value}).scalar()
-        if not user:
-            raise ValidationError('There is not such user in datas')
-    
-    @validates_schema
-    def validate_password(self, data, **kwargs):
-        user_id = data.get('user_id')
-        password = data.get('password')
-        if len(password)< 1 or len(password)> 4:
-            raise ValidationError('Password has to be over than 0 charackter and below 4')
-        result = db.session.execute(text('SELECT password FROM users WHERE user_id = :user_id'), {'user_id': user_id}).scalar()
-        if not result or not check_password_hash(result, password):
-            raise ValidationError('Wrong password')
-        
-class DeliverCreateSupplier(Schema):
-    supplier = fields.Str(required=True)
-    deliver_external_number = fields.Str(required=True)
-    delivery_date = fields.Date(required=True)
-
-
-class DeliverCreateDetails(Schema):
-    product_name = fields.Str(required=True)
-    ean = fields.Str(required=True)
-    expected_amount = fields.Integer(required=True)
-
-    @validates('ean')
-    def validate_ean(self, value, **kwargs):
+    @field_validator('ean')
+    def validate_ean(cls, value):
         if not value.isdigit() or len(value) != 13:
-            raise ValidationError('EAN must consist of 13 exactly digits')
+            raise ValueError('EAN has to be consist of 13 character')
+        return value
+
+class LocationSchema(BaseModel):
+    location: str
+
         
-    @validates('expected_amount')
-    def validate_amount(self, value, **kwargs):
+class AmountSchema(BaseModel):
+    amount : int
+    force : bool = False
+
+    @field_validator('amount')
+    def validate_amount(cls, value):
         if value <= 0:
-            raise ValidationError('Amount must be greater than 0')
+            raise ValueError('Amount has to be over 0')
+        return value
         
-class DeliverProductsListSchema(Schema):
-    products = fields.List(fields.Nested(DeliverCreateDetails), required=True)
+class DateSchema(BaseModel):
+    date : date
+
+    @field_validator('date')
+    def validate_date(cls, value):
+        if value <= date.today():
+            raise ValueError('Date has to be bigger than today')
+        return value
+        
+class ChooseProductSchema(BaseModel):
+    product_id : int
+
+#napisac funkcje w klasie sprawdzające czy dany uzytkownik jest w bazie dancyh
+class AuthRegisterSchema(BaseModel):
+    user_id : str
+    user_name : str
+    password : str
+    # password = fields.Str(required = True, load_only=True, validate=validate.Length(min=1, max=4))
+
+    @field_validator('user_id')
+    def validate_user_id(cls, value):
+        if len(value) != 2:
+            raise ValueError('User_id is the persons initials')
+        return value
+    
+    @field_validator('password', mode = 'after')
+    def validate_password_lenght(cls, value, info: FieldValidationInfo):
+        if len(value)< 1 or len(value)> 4:
+            raise ValueError('Password has to be over than 0 charackter and below 4')
+        return value
+        
+class AuthLoginSchema(BaseModel):
+    user_id : str
+    password : str
+
+    @field_validator('user_id')
+    def validate_user_id(cls, value):
+        if len(value) != 2:
+            raise ValueError('User_id is the persons initials')
+        return value
+
+        
+class DeliverCreateSupplier(BaseModel):
+    supplier : str
+    deliver_external_number : str
+    delivery_date : str
+
+
+class DeliverCreateDetails(BaseModel):
+    product_name : str
+    ean : str
+    expected_amount : int
+
+    @field_validator('ean')
+    def validate_ean(cls, value):
+        if not value.isdigit() or len(value) != 13:
+            raise ValueError('EAN must consist of 13 exactly digits')
+        return value
+        
+    @field_validator('expected_amount')
+    def validate_amount(cls, value):
+        if value <= 0:
+            raise ValueError('Amount must be greater than 0')
+        return value
+        
+class DeliverProductsListSchema(BaseModel):
+    products : List[DeliverCreateDetails]
+
+class CreateRandomOrder(BaseModel):
+    amount: int
+    shipping_date: date
+
+    @field_validator('shipping_date')
+    def validate_date(cls, value):
+        if value <= date.today():
+            raise ValueError('Shipping date must be in future')
+        return value
+    
+class AddProductToOrder(BaseModel):
+    amount: int
+    ean: str
+
+    @field_validator('amount')
+    def validate_amount(cls, value):
+        if value <= 0:
+            raise ValueError('Amount must be greater than 0')
+        return value
+    
+    @field_validator('ean')
+    def validate_ean(cls, value):
+        if not value.isdigit() or len(value) != 13:
+            raise ValueError('EAN must consist of 13 exactly digits')
+        return value
+
+
+class AddCustomer(BaseModel):
+    customer_id: str
+    company_name: str
+    contact_name: str
+    contact_title: str
+    address: str
+    city: str
+    region: str
+    postal_code: str
+    country: str
+    phone: str
+    fax: str
+
+class AddCustomerToOrder(BaseModel):
+    company_name: str
+
+class AddSupplier(BaseModel):
+    company_name: str
+    contact_name: str
+    contact_title: str
+    address: str
+    city: str
+    region: str
+    postal_code: str
+    country: str
+    phone: str
+    fax: str
+    homepage: str

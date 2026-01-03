@@ -8,3 +8,4 @@ venv/
 *.db
 run_find.py
 .env
+wms_dump.sql

@@ -1,8 +1,7 @@
-from app.database.database import db
 from sqlalchemy import text
 from app.tests.conftest import app, db_session, client
 import pytest
-from app.warehouse_operations.product_operations import find_product_by_ean, changing_product_location_by_ean
+from app.warehouse_operations.product_operations import ProductService
 
 
 @pytest.mark.parametrize("code, product_name, ean, amount, jednostka, unit_weight, location, date, reserved_amount, available_amount",
@@ -13,12 +12,13 @@ from app.warehouse_operations.product_operations import find_product_by_ean, cha
 
 
 def test_find_product_by_ean(db_session, code, product_name, ean, amount, jednostka, unit_weight, location, date, reserved_amount, available_amount):
-    db.session.execute(text("""INSERT INTO products (code, product_name, ean, amount, jednostka, unit_weight, location, date, reserved_amount, available_amount)
+    db_session.execute(text("""INSERT INTO products (code, product_name, ean, amount, jednostka, unit_weight, location, date, reserved_amount, available_amount)
                             VALUES (:code, :product_name, :ean, :amount, :jednostka, :unit_weight, :location, :date, :reserved_amount, :available_amount)"""),
                             {'code': code, 'product_name': product_name, 'ean': ean, 'amount': amount, 'jednostka': jednostka, 'unit_weight': unit_weight, 
                             'location': location, 'date': date, 'reserved_amount': reserved_amount, 'available_amount': available_amount})
-    db.session.commit()
-    result = find_product_by_ean(ean)
+    product_service = ProductService(db_session)
+    db_session.commit()
+    result = product_service.find_product_by_ean(ean)
     assert result is not None
     assert len(result) == 1
     assert result[0]['location'] == location
