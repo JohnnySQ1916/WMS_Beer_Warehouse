@@ -35,6 +35,10 @@ During order fulfillment, the system is designed to support efficient and ergono
 git clone https://github.com/JohnnySQ1916/wms.git
 cd wms
 
+## Live API (Render)
+The API is deployed on Render and available at:
+https://wms-beer-warehouse.onrender.com
+
 ## Postman Documentation
 You can view the full API documentation here:  
 [WMS API Docs](https://documenter.getpostman.com/view/38894958/2sB3WsQzuL)
@@ -42,4 +46,14 @@ You can view the full API documentation here:
 ## How to use
 1. Import the Postman Collection from the `WMS.postman_collection.json` file.  
 2. Follow the documentation to test endpoints and workflows.
+
+## Authentication
+1. Log in via:
+POST /auth/login
+2. Copy the access token from the response
+3. In Postman:
+- Go to Authorization tab
+- Select: Bearer Token
+- Paste the token
+4. You can use key: "KS", value: 1
 
