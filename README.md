@@ -57,3 +57,14 @@ POST /auth/login
 - Paste the token
 4. You can use key: "KS", value: 1
 
+
+## Docker
+
+### Build
+docker compose build
+
+### Run
+docker compose up
+
+API available at:
+http://localhost:8000

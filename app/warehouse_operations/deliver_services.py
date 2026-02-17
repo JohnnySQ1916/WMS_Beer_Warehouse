@@ -3,6 +3,23 @@ from sqlalchemy.sql import text
 from datetime import datetime, date, timezone
 from app.models import DeliveryDetail, DeliveryOrder
 from sqlalchemy.orm import Session
+from contextlib import contextmanager
+import logging
+from app.constant.status import DeliverStatus
+from typing import List
+from sqlalchemy.engine import Row
+
+logger = logging.getLogger(__name__)
+
+@contextmanager
+def transaction(db: Session):
+    try:
+        yield db
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        logger.exception(f"Bład w transakcji: {e}")
+        raise
 
 
 class DeliveryService:
@@ -34,114 +51,102 @@ class DeliveryService:
         return DeliverNumber
 
     def check_deliver_to_do(self):
-        result = self.db.execute(text("SELECT * FROM delivery_order WHERE status = 'undone' OR status = 'pending'")).fetchall()
+        result = self.db.execute(text("SELECT * FROM delivery_order WHERE status = :undone OR status = :pending"), 
+                                 {'undone': DeliverStatus.UNDONE.value, 'pending': DeliverStatus.PENDING.value}).fetchall()
         return result
 
-    def supplier_exist(self, supplier):
+    def supplier_exist(self, supplier: str) -> bool:
         result = self.db.execute(text(
             'SELECT company_name FROM suppliers WHERE company_name = :name'), {'name': supplier}).scalar()
         return bool(result)
 
 
-    def create_supplier_deliver(self, supplier, deliver_external_number, delivery_date):
-        try:
+    def create_supplier_deliver(self, supplier: str, deliver_external_number: str, delivery_date: date) -> str:
+        with transaction(self.db):
             deliver_id = self.DeliverIDGenerate()
             delivery_order_query = text("""INSERT INTO delivery_order (deliver_id, supplier, delivery_date, deliver_external_number, create_date, status)
                                         VALUES(:deliver_id, :supplier, :delivery_date, :deliver_external_number, :create_date, :status)""")
             self.db.execute(delivery_order_query, {'deliver_id': deliver_id, 'supplier': supplier, 'delivery_date': delivery_date,
-                                                    'deliver_external_number': deliver_external_number, 'create_date': date.today(), 'status': 'undone'})
-            self.db.commit()
-            print(deliver_id)
+                                                    'deliver_external_number': deliver_external_number, 'create_date': date.today(), 'status': DeliverStatus.UNDONE.value})
+            logger.info(deliver_id)
             return deliver_id
-        except Exception as e:
-            self.db.rollback()
-            print(f'Error while creating delivery {e}')
-            return False
 
 
-    def create_deliver_details(self, deliver_id, product_name, ean, expected_amount):
-        try:
+    def create_deliver_details(self, deliver_id: str, product_name: str, ean: str, expected_amount: int) -> str:
+        with transaction(self.db):
             new_item = DeliveryDetail(deliver_id = deliver_id, product_name = product_name, ean = ean, expected_amount = expected_amount)
             self.db.add(new_item)
-            self.db.commit()
             return deliver_id
-        except Exception as e:
-            self.db.rollback()
-            print(f'Error while creating delivery details {e}')
-            return False
         
-    def check_undone_deliver(self, deliver_id):
-        delivery_query = text("SELECT product_name, expected_amount, ean FROM deliver_details WHERE deliver_id = :deliver_id AND status NOT IN ('done', 'pending')")
-        delivery = self.db.execute(delivery_query, {'deliver_id': deliver_id}).fetchall()
+    def check_undone_deliver(self, deliver_id: str) ->List[Row]:
+        delivery_query = text("SELECT product_name, expected_amount, ean FROM deliver_details WHERE deliver_id = :deliver_id AND status NOT IN (:done, :pending)")
+        delivery = self.db.execute(delivery_query, {'deliver_id': deliver_id, 'done': DeliverStatus.DONE.value, 'pending': DeliverStatus.PENDING.value}).fetchall()
         return delivery
 
 
-    def check_status(self, ean, deliver_id):
+    def check_status(self, ean: str, deliver_id: str) -> str:
         result = self.db.execute(text('SELECT status FROM deliver_details WHERE ean = :ean AND deliver_id = :deliver_id AND target_location IS NULL'),
-                                    {'ean': ean, 'deliver_id': deliver_id}).fetchone()
+                                    {'ean': ean, 'deliver_id': deliver_id}).scalar()
         if not result:
             return None
-        return result[0]
+        return result
 
-    def update_date(self, deliver_id, expiration_date, ean):
-        update_query = text("UPDATE deliver_details SET date = :date, status = 'date confirmed' WHERE deliver_id = :deliver_id AND ean = :ean AND target_location IS NULL")
-        self.db.execute(update_query, {'date': expiration_date, 'deliver_id': deliver_id, 'ean': ean})
-        self.db.commit()
+    def update_date(self, deliver_id: str, expiration_date: date, ean: str) -> None:
+        with transaction(self.db):
+            update_query = text("UPDATE deliver_details SET date = :date, status = :status WHERE deliver_id = :deliver_id AND ean = :ean AND target_location IS NULL")
+            self.db.execute(update_query, {'date': expiration_date, 'status': DeliverStatus.DATE.value, 'deliver_id': deliver_id, 'ean': ean})
 
-    def update_amount_when_not_expected_amount(self, deliver_id, amount, ean):
-        self.db.execute(text("UPDATE deliver_details SET amount = :amount, status = 'amount confirmed' WHERE deliver_id = :deliver_id AND ean = :ean AND target_location IS NULL"),
-                        {'amount': amount, 'deliver_id': deliver_id, 'ean': ean})
-        self.db.commit()
+    def update_amount_when_not_expected_amount(self, deliver_id: str, amount: int, ean: str) -> None:
+        with transaction(self.db):
+            self.db.execute(text("UPDATE deliver_details SET amount = :amount, status = :status WHERE deliver_id = :deliver_id AND ean = :ean AND target_location IS NULL"),
+                            {'amount': amount, 'status': DeliverStatus.AMOUNT.value, 'deliver_id': deliver_id, 'ean': ean})
 
-    def update_amount_with_expected_amount(self, deliver_id, amount, ean):
-        self.db.execute(text("UPDATE deliver_details SET amount = :amount, status = 'amount confirmed' WHERE deliver_id = :deliver_id AND ean = :ean"),
-                        {'amount': amount, 'deliver_id': deliver_id, 'ean': ean})
-        self.db.commit()
+    def update_amount_with_expected_amount(self, deliver_id: str, amount: int, ean: str) -> None:
+        with transaction(self.db):
+            self.db.execute(text("UPDATE deliver_details SET amount = :amount, status = :status WHERE deliver_id = :deliver_id AND ean = :ean"),
+                            {'amount': amount, 'status': DeliverStatus.AMOUNT.value, 'deliver_id': deliver_id, 'ean': ean})
 
-    def update_target_location(self, target_location, user_id, ean, deliver_id, status):
-        update_deliver_query = text("""UPDATE deliver_details SET user_id = :user_id, target_location = :target_location, deliver_time = :deliver_time, status = :status,
-                                deliver_date = :deliver_date WHERE ean = :ean AND deliver_id = :deliver_id AND target_location IS NULL""")
-        self.db.execute(update_deliver_query, {'user_id': user_id, 'target_location': target_location, 'ean': ean, 'deliver_id': deliver_id, 
-                                            'deliver_time':  datetime.now(timezone.utc), 'status': status, 'deliver_date': date.today()})
-        self.db.commit()
+    def update_target_location(self, target_location: str, user_id: str, ean: str, deliver_id: str, status: str) -> None:
+        with transaction(self.db):
+            update_deliver_query = text("""UPDATE deliver_details SET user_id = :user_id, target_location = :target_location, deliver_time = :deliver_time, status = :status,
+                                    deliver_date = :deliver_date WHERE ean = :ean AND deliver_id = :deliver_id AND target_location IS NULL""")
+            self.db.execute(update_deliver_query, {'user_id': user_id, 'target_location': target_location, 'ean': ean, 'deliver_id': deliver_id, 
+                                                'deliver_time':  datetime.now(timezone.utc), 'status': status, 'deliver_date': date.today()})
 
-    def change_ean_status(self, ean, deliver_id):
-        try:
+    def change_ean_status(self, ean: str, deliver_id: str) -> None:
+        with transaction(self.db):
             update_query = text(
-                "UPDATE deliver_details SET status = 'ean confirmed' WHERE deliver_id = :deliver_id AND ean = :ean AND target_location IS NULL")
-            update = self.db.execute(
-                update_query, {'deliver_id': deliver_id, 'ean': ean})
-            self.db.commit()
-        except Exception as e:
-            self.db.rollback()
-            print(f'Its appear an error {e}')
+                "UPDATE deliver_details SET status = :status WHERE deliver_id = :deliver_id AND ean = :ean AND target_location IS NULL")
+            self.db.execute(update_query, {'status': DeliverStatus.EAN.value, 'deliver_id': deliver_id, 'ean': ean})
+            
 
-    def insert_new_row_into_table(self, deliver_id, ean, user_id, total_amount):
-        product_query = text('SELECT * FROM deliver_details WHERE deliver_id = :deliver_id AND ean = :ean ORDER BY id DESC LIMIT 1')
-        product = self.db.execute(product_query, {'deliver_id': deliver_id, 'ean': ean}).fetchone()
-        insert_query = text("""INSERT INTO deliver_details (deliver_id, user_id, product_name, ean, expected_amount, status)
-                            VALUES (:deliver_id, :user_id, :product_name, :ean, :expected_amount, :status)""")
-        self.db.execute(insert_query, {'deliver_id': deliver_id, 'user_id': user_id, 
-                                                'product_name': product.product_name, 'ean': ean, 'expected_amount': product.expected_amount - total_amount, 'status': 'undone'})
-        self.db.commit()
+    def insert_new_row_into_table(self, deliver_id: str, ean: str, user_id: str, total_amount: int):
+        with transaction(self.db):
+            product_query = text('SELECT * FROM deliver_details WHERE deliver_id = :deliver_id AND ean = :ean ORDER BY id DESC LIMIT 1')
+            product = self.db.execute(product_query, {'deliver_id': deliver_id, 'ean': ean}).fetchone()
+            insert_query = text("""INSERT INTO deliver_details (deliver_id, user_id, product_name, ean, expected_amount, status)
+                                VALUES (:deliver_id, :user_id, :product_name, :ean, :expected_amount, :status)""")
+            self.db.execute(insert_query, {'deliver_id': deliver_id, 'user_id': user_id, 
+                                                    'product_name': product.product_name, 'ean': ean, 'expected_amount': product.expected_amount - total_amount, 'status': DeliverStatus.UNDONE.value})
 
-    def check_if_done(self, deliver_id):
+
+    def check_if_done(self, deliver_id: str) -> Row:
         if_done = self.db.execute(text("SELECT * FROM deliver_details WHERE deliver_id = :deliver_id AND status = 'undone' LIMIT 1"), {'deliver_id': deliver_id}).fetchone()
         return if_done
 
-    def update_deliver_order(self, deliver_id):
-        self.db.execute(text("UPDATE delivery_order SET status = 'done' WHERE deliver_id = :deliver_id"), {'deliver_id': deliver_id})
-        self.db.commit()
+    def update_deliver_order(self, deliver_id: str) -> None:
+        with transaction(self.db):
+            self.db.execute(text("UPDATE delivery_order SET status = 'done' WHERE deliver_id = :deliver_id"), {'deliver_id': deliver_id})
 
-    def update_products(self, target_location, ean, deliver_id):
-        try:
+    def update_products(self, target_location: str, ean: str, deliver_id: str) -> bool:
+        with transaction(self.db):
             deliver_product = self.db.execute(text("""SELECT * FROM deliver_details WHERE deliver_id = :deliver_id AND ean = :ean  
-                                                    AND status IN ('pending', 'done') ORDER BY id DESC LIMIT 1"""),
-                                                {'deliver_id': deliver_id, 'ean': ean}).fetchone()
+                                                    AND status IN (:pending, :done) ORDER BY id DESC LIMIT 1"""),
+                                                {'deliver_id': deliver_id, 'ean': ean, 'pending': DeliverStatus.PENDING.value, 'done': DeliverStatus.DONE.value}).fetchone()
             product = self.db.execute(
                 text('SELECT * FROM product_details WHERE ean = :ean'), {'ean': ean}).fetchone()
             if not deliver_product or not product:
-                print("No data in database!")
+                logger.warning("No data in database!")
                 return False
             is_exist_query = text(
                 'SELECT 1 FROM products WHERE ean = :ean AND location = :location AND date = :date LIMIT 1')
@@ -159,9 +164,4 @@ class DeliveryService:
                                     WHERE ean = :ean AND location = :location AND date = :date""")
                 self.db.execute(update_query, {'new_amount': deliver_product.amount,
                                 'ean': ean, 'location': target_location, 'date': deliver_product.date})
-            self.db.commit()
             return True
-        except Exception as e:
-            self.db.rollback()
-            print(f'It is appear an error: {e}')
-            return False

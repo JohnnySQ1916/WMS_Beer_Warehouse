@@ -2,12 +2,14 @@ from app.database.database import get_db
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
+from typing import List
+from sqlalchemy.engine import Row
 
 class LocationService:
     def __init__(self, db: Session):
         self.db = db
 
-    def find_product_by_location(self, location: str):
+    def find_product_by_location(self, location: str) -> List[Row]:
         query = text("SELECT code, product_name, ean, amount, jednostka, location FROM products WHERE location = :location")
         result = self.db.execute(query, {"location": location}).fetchall()
         if not result:
@@ -15,6 +17,6 @@ class LocationService:
         location = [dict(row._mapping) for row in result]
         return location
 
-    def check_is_location_in_base(self, location):
+    def check_is_location_in_base(self, location: str) -> bool:
         query = self.db.execute(text('SELECT COUNT(*) FROM location_weights WHERE location = :location'), {'location': location}).scalar()
         return bool(query)

@@ -5,14 +5,15 @@ from marshmallow import Schema, fields
 from app.common_schema import EanSchema, LocationSchema, DateSchema, AmountSchema, ChooseProductSchema
 from sqlalchemy import text
 from app.database.database import get_db
-from app.utils import verify_token, get_current_user
+from app.utils import  get_current_user
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
+from app.models import ApiResponse
 
 
 router = APIRouter(prefix = '/relocation', tags = ['Relocation'])
 
-@router.get('/start/{ean}')
+@router.get('/start/{ean}', response_model = ApiResponse)
 def get_products_by_ean(ean: str, current_user= Depends(get_current_user), db: Session = Depends(get_db)):
     service = ProductService(db)
     relocation_service = RelocationService(db)
@@ -21,12 +22,12 @@ def get_products_by_ean(ean: str, current_user= Depends(get_current_user), db: S
         raise HTTPException(status_code = 404, detail= 'Product not found')
     relocation_id = relocation_service.new_record_relocation(ean)
     print(relocation_id)
-    return {'product': product,
+    return ApiResponse( data = {'product': product,
             'relocation_id': relocation_id,
-            'message': 'Enter location'}
+            'message': 'Enter location'})
 
 
-@router.post('/enter_location/{relocation_id}')
+@router.post('/enter_location/{relocation_id}', response_model = ApiResponse)
 def enter_location(relocation_id: int, body: LocationSchema, current_user= Depends(get_current_user), db: Session = Depends(get_db)):
     user_id = current_user['user_id']
     location = body.location
@@ -41,9 +42,9 @@ def enter_location(relocation_id: int, body: LocationSchema, current_user= Depen
         raise HTTPException(status_code = 404, detail = 'Product not found')
     dooble = product_service.fetch_all({'ean': ean, 'location': location}, 'products')
     if len(dooble) > 1:
-        return {
-            'message': 'Choose product to relocate',
-            'data': [
+        return ApiResponse(
+            message = 'Choose product to relocate',
+            data = [
                 {
                     'id': row.id,
                     'product_name': row.product_name,
@@ -52,16 +53,16 @@ def enter_location(relocation_id: int, body: LocationSchema, current_user= Depen
                 }
                 for row in dooble
             ]
-        }
+        )
     elif len(dooble) == 1:
         date = dooble[0].date
         relocation_service.confirm_location(relocation_id, location, date, user_id)
-        return {'message': 'Enter amount: '}
+        return ApiResponse(message = 'Enter amount: ')
     else:
         raise HTTPException(status_code= 404, detail='No product on this location')
 
 
-@router.post('/confirm_date/{relocation_id}')
+@router.post('/confirm_date/{relocation_id}', response_model = ApiResponse)
 def confirm_date_choice(relocation_id: int, body : ChooseProductSchema, current_user= Depends(get_current_user), db: Session = Depends(get_db)):
     product_service = ProductService(db)
     relocation_service = RelocationService(db)
@@ -70,10 +71,10 @@ def confirm_date_choice(relocation_id: int, body : ChooseProductSchema, current_
         raise HTTPException(status_code= 409, detail= 'Location or EAN not confirmed')
     product_id = body.product_id
     relocation_service.update_date(product_id, relocation_id) 
-    return {'message': 'Enter amount'}
+    return ApiResponse(message = 'Enter amount')
 
 
-@router.post('/confirm_amount/{relocation_id}')
+@router.post('/confirm_amount/{relocation_id}', response_model = ApiResponse)
 def enter_amount(relocation_id: int, body: AmountSchema, current_user= Depends(get_current_user), db: Session = Depends(get_db)):
     product_service = ProductService(db)
     relocate_service = RelocationService(db)
@@ -86,13 +87,13 @@ def enter_amount(relocation_id: int, body: AmountSchema, current_user= Depends(g
     amount = body.amount
     amount_on_location = product_service.fetch_scalar('amount', {'ean': ean, 'location': location, 'date': date}, 'products')
     if amount > amount_on_location:
-        return ({'message': f'Too high number to relocate. On location it is only {amount_on_location}.'})
+        return ApiResponse(message = f'Too high number to relocate. On location it is only {amount_on_location}.')
     else:
         relocate_service.confirm_amount(relocation_id, amount)
-        return ({'message': 'Enter target location'})
+        return ApiResponse(message = 'Enter target location')
 
 
-@router.post('/confirm_target_location/{relocation_id}')
+@router.post('/confirm_target_location/{relocation_id}', response_model = ApiResponse)
 def enter_target_location(relocation_id: int, body: LocationSchema, current_user= Depends(get_current_user), db: Session = Depends(get_db)):
     relocation_service = RelocationService(db)
     product_service = ProductService(db)
@@ -114,15 +115,15 @@ def enter_target_location(relocation_id: int, body: LocationSchema, current_user
     try:
         relocation_service.confirm_target_location(relocation_id, target_location)
         result = relocation_service.relocate_in_products(ean, location, date, amount, target_location)
-        return {
-            'message': 'Relocate confirmed'
-        }
+        return ApiResponse(
+            message = 'Relocate confirmed'
+        )
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code = 500,  detail= str(e))
 
 
-@router.get('/relocate_by_location/{location:path}')
+@router.get('/relocate_by_location/{location:path}', response_model = ApiResponse)
 def get_products_by_location(location: str, current_user= Depends(get_current_user), db : Session = Depends(get_db)):
     location_service = LocationService(db)
     relocation_service = RelocationService(db)
@@ -133,16 +134,16 @@ def get_products_by_location(location: str, current_user= Depends(get_current_us
         user_id = current_user['user_id']
         relocation_id = relocation_service.new_record_relocation_by_location(location, user_id)
         if product:
-            return {
-                'product': product,
+            return ApiResponse(
+                data = {'product': product,
                 'id': relocation_id,
-                'message': 'Enter ean'}
+                'message': 'Enter ean'})
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code = 500,  detail= str(e))
     
 
-@router.post('/enter_ean/{id}')
+@router.post('/enter_ean/{id}', response_model = ApiResponse)
 def enter_ean(id: int, body : EanSchema, current_user= Depends(get_current_user), db: Session = Depends(get_db)):
     relocation_service = RelocationService(db)
     ean = body.ean
@@ -155,9 +156,9 @@ def enter_ean(id: int, body : EanSchema, current_user= Depends(get_current_user)
     dooble = db.execute(
         dooble_query, {'ean': ean, 'location': location}).fetchall()
     if len(dooble) > 1:
-        return{
-            'message': 'Choose product to relocate',
-            'data': [
+        return ApiResponse(
+            message = 'Choose product to relocate',
+            data = [
                 {
                     'id': row.id,
                     'product_name': row.product_name,
@@ -166,12 +167,12 @@ def enter_ean(id: int, body : EanSchema, current_user= Depends(get_current_user)
                 }
                 for row in dooble
             ]
-        }
+        )
     elif len(dooble) == 1:
         date = dooble[0].date
         relocation_service.confirm_ean(id, product_name, ean, date)
-        return {
-            'message': 'Enter amount: '
-        }
+        return ApiResponse(
+            message = 'Enter amount: '
+        )
     else:
         raise HTTPException(status_code = 400, detail= f'No product found with EAN {ean} on location {location}.')

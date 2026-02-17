@@ -10,7 +10,7 @@ from app.routes.add_product_route import router as add_product_router
 from app.routes.create_order_routes import router as create_order_router
 import os
 from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import FastAPI, APIRouter
 from app.database.database import engine
 from app.database.base import Base
 
@@ -39,8 +39,6 @@ config = {
 }
 
 
-# Inicjalizujemy tabele, jeśli nie istnieją
-Base.metadata.create_all(bind=engine)
 
 # Tworzymy instancję FastAPI
 app = FastAPI(
@@ -48,16 +46,19 @@ app = FastAPI(
     description="Warehouse Management System API",
     version="1.0.0"
 )
+api_v1 = APIRouter(prefix="/api/v1")
 
 # Rejestrujemy routery (czyli odpowiedniki Flaskowych blueprintów)
-app.include_router(products_router)
-app.include_router(location_router)
-app.include_router(relocation_router)
-app.include_router(delivery_router)
-app.include_router(execute_order_router)
-app.include_router(auth_router)
-app.include_router(add_product_router)
-app.include_router(create_order_router)
+api_v1.include_router(products_router)
+api_v1.include_router(location_router)
+api_v1.include_router(relocation_router)
+api_v1.include_router(delivery_router)
+api_v1.include_router(execute_order_router)
+api_v1.include_router(auth_router)
+api_v1.include_router(add_product_router)
+api_v1.include_router(create_order_router)
+
+app.include_router(api_v1)
 
 # Opcjonalnie: endpoint testowy
 @app.get("/")

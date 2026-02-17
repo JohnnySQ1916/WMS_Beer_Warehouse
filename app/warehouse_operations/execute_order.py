@@ -3,13 +3,31 @@ from sqlalchemy.sql import text
 import datetime
 from sqlalchemy.orm import Session
 from app.warehouse_operations.product_operations import ProductService
+from contextlib import contextmanager
+import logging
+from app.constant.status import OrderStatus, PickingStatus
+from typing import List, Dict
+from sqlalchemy.engine import Row
+from datetime import date
+
+logger = logging.getLogger(__name__)
+
+@contextmanager
+def transaction(db: Session):
+    try:
+        yield db
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        logger.exception(f"Bład w transakcji: {e}")
+        raise
 
 
 class ExecuteOrder:
     def __init__(self, db:Session):
         self.db = db
 
-    def Queue_To_Execute_Order(self, order_id, min_date=None):
+    def Queue_To_Execute_Order(self, order_id: str, min_date: date | None = None) -> List[Row]:
         try:
             bind = self.db.bind or self.db.engine
             dialect = bind.dialect.name
@@ -61,8 +79,8 @@ class ExecuteOrder:
             raise RuntimeError("Queue_To_Execute_Order failed") from e
 
 # funkcja reservation_of_location czyli funkcja, która przy rezerwacji uwzglednia lokalizacje danego towaru. Funkcja zostaje użyta, gdy magazynier przechodzi do realizacji danego zamówienia
-    def reservation_of_location(self, order_id, min_date= None):
-        try:
+    def reservation_of_location(self, order_id: str, min_date: date | None = None) -> Dict:
+        with transaction(self.db):
             query = """SELECT
                 od.product_name,
                 od.code,
@@ -113,28 +131,26 @@ class ExecuteOrder:
                                     'take_amount': take_amount, 'product_id': product.id})
                     reserved_items[key]['taken_amount'] += take_amount
                     reserved_items[key]['location'].append(product.location)
-            self.db.commit()
             return reserved_items
-        except Exception as e:
-            self.db.rollback()
-            print(f"Błąd przy rezerwacji: {e}")
-            return None
-
-    def insert_into_picks(self, order_id, product, amount, user_id):
+        
+    #sub-function
+    def insert_into_picks(self, order_id: str, product: Row, amount: int, user_id: int):
         picks_query = text("""INSERT INTO picks (user_id, order_id, product_name, amount, date, time, product_id, location, ean)
                                 VALUES (:user_id, :order_id, :product_name, :product_amount, :date, :time, :product_id, :location, :ean)""")
         self.db.execute(picks_query, {'user_id': user_id, 'order_id': order_id, 'product_name': product.product_name,
                                             'product_amount': amount, 'date': datetime.date.today(), 'time': datetime.datetime.now().strftime("%H:%M:%S"), 
                                             'product_id': product.id, 'location': product.location, 'ean': product.ean})
         
-    def update_order_details(self, new_collected, product, order_id):
-        status = 'done' if new_collected == product.amount else 'part'
+    #sub-function
+    def update_order_details(self, new_collected: int, product: Row, order_id: str) -> None:
+        status = PickingStatus.DONE.value if new_collected == product.amount else PickingStatus.PART.value
         order_details_query = text(
                 "UPDATE orders_details SET status = :status, collected_amount = :collected WHERE ean = :ean AND order_id = :order_id")
         self.db.execute(order_details_query, {
                             'status': status, 'collected': new_collected, 'ean': product.ean, 'order_id': order_id})
         
-    def insert_into_order_picking(self, order_id, product, amount, user_id, status):
+    #sub-function    
+    def insert_into_order_picking(self, order_id: str, product: Row, amount: int, user_id: str, status: str) -> None:
         order_process_query = text("""INSERT INTO order_picking_details(product_id, product_name, expected_amount, picked_amount, picked_location, 
                                 picked_by, scanned_ean, picked_time, status, order_id, picked_date, expected_ean, product_date)
                                 VALUES(:product_id, :product_name, :expected_amount, :picked_amount, :picked_location, 
@@ -145,37 +161,39 @@ class ExecuteOrder:
                                                 'status': status, 'order_id': order_id, 'picked_date': datetime.date.today(), 'expected_ean': product.ean, 
                                                 'product_date': product.date})
         
-    def update_reservation(self, product, amount):
+    #sub-function    
+    def update_reservation(self, product: Row, amount: int) -> None:
         reservation_query = text("""UPDATE reservation SET amount = amount - :collected, reserved_amount = reserved_amount - :collected WHERE product_name = :product_name AND ean = :product_ean""")
         self.db.execute(reservation_query, {
             'collected': amount, 'product_name': product.product_name, 'product_ean': product.ean})
 
-    def delete_row_from_products(self, product):
+    #sub-function
+    def delete_row_from_products(self, product: Row) -> None:
         delete_row_query = text(
                     'DELETE FROM products WHERE ean = :ean AND location = :location AND date = :date')
         self.db.execute(delete_row_query, {
                         'ean': product.ean, 'location': product.location, 'date': product.date})
         
-    def delete_row(self, table, params, operator = 'AND'):
-        product_service = ProductService(self.db)
-        where = product_service.dict_to_where(params, operator)
-        delete_row_query = text(
-                    f'DELETE FROM {table} WHERE {where}')
-        self.db.execute(delete_row_query, params)
+    #sub-function
+    def delete_row(self, table: str, params: str, operator: str = 'AND') -> None:
+            product_service = ProductService(self.db)
+            where = product_service.dict_to_where(params, operator)
+            delete_row_query = text(
+                        f'DELETE FROM {table} WHERE {where}')
+            self.db.execute(delete_row_query, params)
 
-    def update_products(self, product, amount):
+    #sub-function
+    def update_products(self, product: Row, amount: int) -> None:
         self.db.execute(text('UPDATE products SET amount = amount - :amount WHERE ean = :ean AND location = :location AND date = :date'),
                         {'amount': amount, 'ean': product.ean, 'location': product.location, 'date': product.date})
 
 
-    def take_product_out_of_base(self, order_id, product, amount, collected, user_id):
+    def take_product_out_of_base(self, order_id: str, product: Row, amount: int, collected: int, user_id: str) -> None:
         product_service = ProductService(self.db)
-        try:
+        with transaction(self.db):
             self.insert_into_picks(order_id, product, amount, user_id)
             new_collected = collected + amount
-
-            status = 'done' if new_collected == product.amount else 'part'
-
+            status = PickingStatus.DONE.value if new_collected == product.amount else PickingStatus.PART.value
             self.update_order_details(new_collected, product, order_id)
             self.insert_into_order_picking(order_id, product, amount, user_id, status)
             self.update_reservation(product, amount)
@@ -184,36 +202,36 @@ class ExecuteOrder:
             self.update_products(product, amount)
             if amount_on_location == 0:
                 self.delete_row_from_products(product)
-            self.db.commit()
-        except Exception as e:
-            self.db.rollback()
-            print(f"❌ Błąd podczas zdejmowania produktu z bazy: {e}")
 
 
-    def update_when_order_done(self, order_id):
-        self.db.execute(text('UPDATE orders SET status = :status WHERE order_id = :order_id'), {'status': 'done', 'order_id': order_id})
-        self.db.commit()
+    def update_when_order_done(self, order_id: str) -> None:
+        with transaction(self.db):
+            self.db.execute(text('UPDATE orders SET status = :status WHERE order_id = :order_id'), {'status': OrderStatus.Done.value, 'order_id': order_id})
 
 
-    def get_done_products(self, order_id):
-        product_service = ProductService(self.db)
-        done_products = product_service.fetch_all({'order_id': order_id, 'status': 'done'}, 'order_picking_details', 
-                                                  arg = 'product_id, product_name, expected_ean, picked_amount, picked_location')
-        return done_products
+    def get_done_products(self, order_id: str) -> None:
+        with transaction(self.db):
+            product_service = ProductService(self.db)
+            done_products = product_service.fetch_all({'order_id': order_id, 'status':  PickingStatus.DONE}, 'order_picking_details', 
+                                                    arg = 'product_id, product_name, expected_ean, picked_amount, picked_location')
+            return done_products
     
-    def update_order_details_reverse(self, product, collected, order_id):
+    #sub-function
+    def update_order_details_reverse(self, product: Row, collected: int, order_id: str) -> None:
         order_details_query = text("UPDATE orders_details SET status = :status, collected_amount = :collected WHERE ean = :ean AND order_id = :order_id")
-        self.db.execute(order_details_query, {'status': 'undone', 'collected': collected - product.picked_amount,
+        self.db.execute(order_details_query, {'status': PickingStatus.UNDONE.value, 'collected': collected - product.picked_amount,
                                                 'ean': product.expected_ean, 'order_id': order_id})
-        
-    def update_reservation_reverse(self, product, order_id):
+
+    #sub-function    
+    def update_reservation_reverse(self, product: Row, order_id: str) -> None:
         product_service = ProductService(self.db)
         reverse_reservation_query = text("""UPDATE reservation SET amount = amount + :collected, reserved_amount = reserved_amount + :collected,
                                             available_amount = available_amount + :collected  WHERE ean = :ean""")
         self.db.execute(reverse_reservation_query, {
                         'collected': product.picked_amount, 'ean': product.expected_ean, 'order_id': order_id})
     
-    def insert_product_back(self, product):
+    #sub-function
+    def insert_product_back(self, product: Row) -> None:
         insert_back = text("""INSERT INTO products (code, product_name, ean, amount, jednostka, unit_weight, location, date, reserved_amount, available_amount)
                                 VALUES (:code, :product_name, :ean, :amount, :jednostka, :unit_weight, :location, :date, :reserved_amount, :available_amount)""")
         product_query = text(
@@ -224,15 +242,16 @@ class ExecuteOrder:
                                         'location': product.picked_location, 'date': product.picked_date, 'reserved_amount': 0,
                                         'available_amount': product.picked_amount})
 
-    def update_reverse_product(self, product):
+    #sub-function
+    def update_reverse_product(self, product: Row) -> None:
         update_products = text("""UPDATE products SET amount = amount + :collected, reserved_amount = reserved_amount + :collected, 
                                     available_amount= available_amount + :collected WHERE ean = :product_ean AND location = :product_location AND date = :product_date""")
         self.db.execute(update_products, {
                         'collected': product.picked_amount, 'product_ean': product.expected_ean,
                                     'product_location': product.picked_location, 'product_date': product.product_date})
 
-    def reverse_picked_product_out_of_base(self, order_id, product):
-        try:
+    def reverse_picked_product_out_of_base(self, order_id: str, product: Row) -> None:
+        with transaction(self.db):
             self.delete_row('picks', {'order_id': order_id, 'product_id': product.id})
             product_service = ProductService(self.db)
             collected = product_service.fetch_scalar('collected_amount', {
@@ -246,8 +265,4 @@ class ExecuteOrder:
                 self.insert_product_back(product)
             else:
                 self.update_reverse_product(product)
-            self.db.commit()
-            print('Pick of product has been reverse')
-        except Exception as e:
-            self.db.rollback()
-            print(f"❌ Mistake with rollback pick: {e}")
+            logger.info('Pick of product has been reverse')

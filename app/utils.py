@@ -4,17 +4,22 @@ from fastapi import Header, HTTPException, Depends
 from fastapi.security import OAuth2PasswordBearer
 import os
 from datetime import datetime, timedelta
+from dotenv import load_dotenv
 
+load_dotenv()
+print("CWD:", os.getcwd())
+# def verify_token(authorization: str = Header(None)):
+#     if not authorization or authorization != os.getenv('SECRET_TOKEN'):
+#         raise HTTPException(status_code=401, detail="Unauthorized")
+#     return True
 
-def verify_token(authorization: str = Header(None)):
-    if not authorization or authorization != "TwójSekretnyToken":
-        raise HTTPException(status_code=401, detail="Unauthorized")
-    return True
-
-SECRET_KEY = os.getenv("JWT_SECRET", "defaultsecret")
+SECRET_KEY = os.getenv("JWT_SECRET", os.getenv('SECRET_KEY'))
+# SECRET_KEY = "ABCD"
 EXPIRE_MINUTES = int(os.getenv("JWT_EXPIRED_MINUTES", 60))
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")  # ścieżka do loginu
+
+print(f"DEBUG: SECRET_KEY is {SECRET_KEY}")
 
 def create_jwt_token(user_id: str):
     payload = {
@@ -23,6 +28,7 @@ def create_jwt_token(user_id: str):
     }
     token = jwt.encode(payload, SECRET_KEY, algorithm="HS256")
     return token
+
 
 def get_current_user(token: str = Depends(oauth2_scheme)):
     try:
