@@ -1,15 +1,22 @@
-from app.database.database import get_db
-from sqlalchemy import text
-from app.common_schema import DeliverCreateSupplier, DeliverCreateDetails, EanSchema, AmountSchema, LocationSchema, DateSchema, DeliverProductsListSchema
-from app.warehouse_operations.deliver_services import  DeliveryService
-from datetime import datetime, date
-from fastapi import FastAPI, HTTPException, Depends, APIRouter
+
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from app.warehouse_operations.product_operations import ProductService
-from app.warehouse_operations.location_operations import LocationService
-from app.utils import get_current_user
+
+from app.common_schema import (
+    AmountSchema,
+    DateSchema,
+    DeliverCreateSupplier,
+    DeliverProductsListSchema,
+    EanSchema,
+    LocationSchema,
+)
 from app.constant.status import DeliverStatus
+from app.database.database import get_db
 from app.models import ApiResponse
+from app.utils import get_current_user
+from app.warehouse_operations.deliver_services import DeliveryService
+from app.warehouse_operations.location_operations import LocationService
+from app.warehouse_operations.product_operations import ProductService
 
 router = APIRouter(prefix= '/delivery', tags = ['Delivery'])
 
@@ -50,11 +57,11 @@ def check_supplier_delivery(current_user= Depends(get_current_user), db: Session
     delivery = deliver_service.check_deliver_to_do()
     if not delivery:
         raise HTTPException(status_code=404, detail= 'No products found for execute delivery')
-    return {
-        'Supplier': [
+    return ApiResponse(
+        data = {'Supplier': [
             {'Supplier': row.supplier}
-        for row in delivery]
-    }
+        for row in delivery]}
+    )
 
 
 @router.get('/check_delivery/{deliver_id}', response_model = ApiResponse)
@@ -84,16 +91,16 @@ def enter_ean_delivery(deliver_id : str, body: EanSchema, current_user= Depends(
         ean_location = product_service.fetch_all({'ean': ean}, 'products')
         deliver_service.change_ean_status(ean, deliver_id)
         return ApiResponse(
+            message = 'Enter product date expired',
             data = {'Expected Amount': expected_amount,
             'Products': [{
                 'Product name': row.product_name,
                 'Amount': row.amount,
                 'Location': row.location,
                 'Date': row.date
-            } for row in ean_location],
-            'message' : 'Enter product date expired'
+            } for row in ean_location]
         })
-        
+
 
 @router.post('/enter_date/{deliver_id}/{ean}', response_model = ApiResponse)
 def enter_date(deliver_id :str, ean : str, body: DateSchema, current_user= Depends(get_current_user), db: Session = Depends(get_db)):
@@ -168,7 +175,7 @@ def enter_location_delivery(deliver_id :str, ean : str, body: LocationSchema, cu
     if not is_order_still_open:
         deliver_service.update_deliver_order(deliver_id)
     update = deliver_service.update_products(target_location, ean, deliver_id)
-    if update == True:
+    if update:
         return ApiResponse(
             message = 'Product accepted on location'
         )

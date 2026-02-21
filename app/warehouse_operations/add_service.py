@@ -1,16 +1,11 @@
-from sqlalchemy import text
-from sqlalchemy.exc import SQLAlchemyError
-from app.warehouse_operations.product_services import get_current_amount, update_location, update_amount, insert_new_product, product_exist_on_location
-from sqlalchemy.orm import Session
-from fastapi import HTTPException, Depends, status
-from app.database.database import get_db
-from sqlalchemy.exc import IntegrityError, SQLAlchemyError
-from sqlalchemy.orm import Session
-from contextlib import contextmanager
 import logging
-from typing import Optional
+from contextlib import contextmanager
 from datetime import date
-from app.common_schema import AddCustomer, AddProductToOrder, AddSupplier
+
+from sqlalchemy import text
+from sqlalchemy.orm import Session
+
+from app.common_schema import AddCustomer, AddSupplier
 
 logger = logging.getLogger(__name__)
 

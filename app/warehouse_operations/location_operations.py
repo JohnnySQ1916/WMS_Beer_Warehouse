@@ -1,9 +1,10 @@
-from app.database.database import get_db
-from sqlalchemy import text
-from sqlalchemy.orm import Session
-from fastapi import HTTPException
 from typing import List
+
+from fastapi import HTTPException
+from sqlalchemy import text
 from sqlalchemy.engine import Row
+from sqlalchemy.orm import Session
+
 
 class LocationService:
     def __init__(self, db: Session):

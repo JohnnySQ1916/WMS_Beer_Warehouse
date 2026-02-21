@@ -1,19 +1,18 @@
 # from app.database.database import get_db
-from app.config import config
-from app.routes.product_operation_routes import router as products_router
-from app.routes.location_operation_routes import router as location_router
-from app.routes.relocation_routes import router as relocation_router
-from app.routes.execute_order_routes import router as execute_order_router
+import os
+
+from dotenv import load_dotenv
+from fastapi import APIRouter, FastAPI
+
 from app.auth.auth import router as auth_router
-from app.routes.delivery_routes import router as delivery_router
+from app.config import config
 from app.routes.add_product_route import router as add_product_router
 from app.routes.create_order_routes import router as create_order_router
-import os
-from dotenv import load_dotenv
-from fastapi import FastAPI, APIRouter
-from app.database.database import engine
-from app.database.base import Base
-
+from app.routes.delivery_routes import router as delivery_router
+from app.routes.execute_order_routes import router as execute_order_router
+from app.routes.location_operation_routes import router as location_router
+from app.routes.product_operation_routes import router as products_router
+from app.routes.relocation_routes import router as relocation_router
 
 load_dotenv()
 

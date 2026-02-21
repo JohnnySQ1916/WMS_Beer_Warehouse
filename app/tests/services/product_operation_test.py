@@ -1,6 +1,6 @@
-from sqlalchemy import text
-from app.tests.conftest import app, db_session, client
 import pytest
+from sqlalchemy import text
+
 from app.warehouse_operations.product_operations import ProductService
 
 
@@ -14,7 +14,7 @@ from app.warehouse_operations.product_operations import ProductService
 def test_find_product_by_ean(db_session, code, product_name, ean, amount, jednostka, unit_weight, location, date, reserved_amount, available_amount):
     db_session.execute(text("""INSERT INTO products (code, product_name, ean, amount, jednostka, unit_weight, location, date, reserved_amount, available_amount)
                             VALUES (:code, :product_name, :ean, :amount, :jednostka, :unit_weight, :location, :date, :reserved_amount, :available_amount)"""),
-                            {'code': code, 'product_name': product_name, 'ean': ean, 'amount': amount, 'jednostka': jednostka, 'unit_weight': unit_weight, 
+                            {'code': code, 'product_name': product_name, 'ean': ean, 'amount': amount, 'jednostka': jednostka, 'unit_weight': unit_weight,
                             'location': location, 'date': date, 'reserved_amount': reserved_amount, 'available_amount': available_amount})
     product_service = ProductService(db_session)
     db_session.commit()

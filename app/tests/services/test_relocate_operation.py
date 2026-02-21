@@ -1,8 +1,9 @@
-from sqlalchemy import text
-from app.tests.conftest import app, db_session, client
-import pytest
-from functools import wraps
 import random
+from functools import wraps
+
+import pytest
+from sqlalchemy import text
+
 from app.warehouse_operations.relocate_operation import RelocationService
 
 params =[("RADU LEO", "RADUGA LEON BUT. 0,5 L", "5902176770099",	45, "szt ",	0.77, "RI-13-01", "2024-12-09", 0, 45),
@@ -22,13 +23,13 @@ def prepare_db(db_session):
     for code, product_name, ean, amount, jednostka, unit_weight, location, date, reserved_amount, available_amount in params:
         db_session.execute(text("""INSERT INTO products (code, product_name, ean, amount, jednostka, unit_weight, location, date, reserved_amount, available_amount)
                                 VALUES (:code, :product_name, :ean, :amount, :jednostka, :unit_weight, :location, :date, :reserved_amount, :available_amount)"""),
-                                {'code': code, 'product_name': product_name, 'ean': ean, 'amount': amount, 'jednostka': jednostka, 'unit_weight': unit_weight, 
+                                {'code': code, 'product_name': product_name, 'ean': ean, 'amount': amount, 'jednostka': jednostka, 'unit_weight': unit_weight,
                                 'location': location, 'date': date, 'reserved_amount': reserved_amount, 'available_amount': available_amount})
         db_session.execute(text("""INSERT INTO product_details (product_name, code, ean, purchase_price, unit_weight) 
                                 VALUES (:product_name, :code, :ean, :purchase_price, :unit_weight)"""), {'product_name': product_name,'code': code,
         'ean': ean,'purchase_price': 10, 'unit_weight': unit_weight})
     db_session.commit()
-        
+
 
 @parametrize_decorator
 def test_new_record_relocation(db_session, code, product_name, ean, amount, jednostka, unit_weight, location, date, reserved_amount, available_amount ):
@@ -101,7 +102,7 @@ def test_relocate_in_products(db_session, code, product_name, ean, amount, jedno
     target_location = random.choice(['RD-01-01', 'RE-10-02', 'RG-03-03'])
     relocation_service.confirm_target_location(result.id, target_location)
     relocation_service.relocate_in_products(ean, location, date, amount, target_location)
-    relocated_product = db_session.execute(text('SELECT * FROM products WHERE ean = :ean AND date = :date AND location = :target_location'), 
+    relocated_product = db_session.execute(text('SELECT * FROM products WHERE ean = :ean AND date = :date AND location = :target_location'),
                                            {'ean': ean, 'date': date, 'target_location': target_location}).fetchone()
     assert relocated_product is not None
     assert relocated_product.location == target_location

@@ -1,9 +1,10 @@
-from app.warehouse_operations.location_operations import LocationService
-from fastapi import APIRouter, Depends, HTTPException
-from app.database.database import get_db
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from app.utils import get_current_user
+
+from app.database.database import get_db
 from app.models import ApiResponse
+from app.utils import get_current_user
+from app.warehouse_operations.location_operations import LocationService
 
 router = APIRouter(prefix='/location', tags = ['Location'])
 

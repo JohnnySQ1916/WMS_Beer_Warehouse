@@ -1,4 +1,3 @@
-from app.database.database import get_db
 from sqlalchemy import text
 
 
@@ -26,7 +25,7 @@ def update_amount(ean, location, added_amount, operation):
         query = text('UPDATE products SET amount = :new_amount WHERE ean = :ean AND location = :location')
         result = db.session.execute(query, {'new_amount': get_current_amount(ean, location)- added_amount, 'ean': ean, 'location': location})
         db.session.commit()
-                                
+
 def insert_new_product(amount, new_location, ean, location_choice, date):
     query = text("""
         INSERT INTO products (code, product_name, ean, amount, jednostka, unit_weight, location, date, reserved_amount, available_amount) 

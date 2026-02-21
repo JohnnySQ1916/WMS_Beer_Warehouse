@@ -1,10 +1,10 @@
 import pytest
-from app.database.database import get_db
-from sqlalchemy import text
 from fastapi.testclient import TestClient
-from app.main import app as fastapi_app
-from app.database.database import TestSessionLocal, test_engine
+
 from app.database.base import Base
+from app.database.database import TestSessionLocal, get_db, test_engine
+from app.main import app as fastapi_app
+
 
 # Tworzenie struktury tabel dla testów
 @pytest.fixture(scope="function", autouse= True)
@@ -48,7 +48,7 @@ def user(client):
         "user_name": "test_user",
         "password": "test"
     }
-    response = client.post("/authentication/register", json=user_data)
+    response = client.post("/api/v1/authentication/register", json=user_data)
     assert response.status_code in (200, 201)
     return user_data
 
@@ -56,7 +56,7 @@ def user(client):
 @pytest.fixture(scope="function")
 def token(client, user):
     response = client.post(
-        "/authentication/login",
+        "/api/v1/authentication/login",
         json={"user_id": user["user_id"], "password": user["password"]}
     )
     assert response.status_code == 200

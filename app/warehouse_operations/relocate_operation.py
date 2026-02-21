@@ -1,13 +1,12 @@
-from app.database.database import get_db
-from sqlalchemy import text
-from app.warehouse_operations.product_services import get_current_amount, update_location, update_amount, insert_new_product, product_exist_on_location
-from app.warehouse_operations.product_operations import ProductService
-from datetime import datetime, date, timezone
-from sqlalchemy.orm import Session
-from fastapi import HTTPException
-from contextlib import contextmanager
 import logging
+from contextlib import contextmanager
+from datetime import date, datetime, timezone
+
+from sqlalchemy import text
+from sqlalchemy.orm import Session
+
 from app.constant.status import PickingStatus
+from app.warehouse_operations.product_operations import ProductService
 
 logger = logging.getLogger(__name__)
 

@@ -1,14 +1,31 @@
-from app.database.base import Base
-from datetime import datetime, date, timedelta
-from app.common_schema import EanSchema, LocationSchema, AmountSchema, DateSchema, ChooseProductSchema
-from werkzeug.security import generate_password_hash, check_password_hash
-from sqlalchemy.dialects.postgresql import TIME
-from sqlalchemy import Column, String, Integer, Numeric, Date, DateTime, BigInteger, ForeignKey
 import os
-from app.utils import create_jwt_token
-from sqlalchemy.orm import relationship
-from typing import Optional, Any
+from datetime import date, datetime, timedelta
+from typing import Any, Optional
+
 from pydantic import BaseModel
+from sqlalchemy import (
+    BigInteger,
+    Column,
+    Date,
+    DateTime,
+    ForeignKey,
+    Integer,
+    Numeric,
+    String,
+)
+from sqlalchemy.dialects.postgresql import TIME
+from sqlalchemy.orm import relationship
+from werkzeug.security import check_password_hash, generate_password_hash
+
+from app.common_schema import (
+    AmountSchema,
+    ChooseProductSchema,
+    DateSchema,
+    EanSchema,
+    LocationSchema,
+)
+from app.database.base import Base
+from app.utils import create_jwt_token
 
 
 class Products(Base):
@@ -40,7 +57,7 @@ class Products(Base):
             raise ValueError('Date is too short')
         if not isinstance(value, datetime.date):
             raise ValueError("Invalid date format.")
-        
+
     def to_dict(self):
         return{
             'Code': self.code,
@@ -94,7 +111,7 @@ class Relocate(Base):
 
     def __repr__(self):
         return f"<Relocation {self.id} {self.product_name} {self.amount}>"
-    
+
 class Customer(Base):
     __tablename__ = 'customers'
 
@@ -112,7 +129,7 @@ class Customer(Base):
 
     def __repr__(self):
         return f"<Customer {self.customer_id} - {self.company_name}>"
-    
+
 
 class DeliveryDetail(Base):
     __tablename__ = "deliver_details"
@@ -133,10 +150,10 @@ class DeliveryDetail(Base):
 
     def __repr__(self):
         return f"<DeliveryDetail id={self.id}, product={self.product_name}, ean={self.ean}, status={self.status}>"
-    
+
 
 class Order(Base):
-    __tablename__ = "orders" 
+    __tablename__ = "orders"
     order_id = Column(String(15), primary_key=True, nullable=False, index= True)
     customer_id = Column(String(15), nullable=True)
     amount = Column(Integer, nullable=True)
@@ -150,7 +167,7 @@ class Order(Base):
 
     def __repr__(self):
         return f"<Order {self.order_id} - {self.customer_id}>"
-    
+
 
 class OrdersDetails(Base):
     __tablename__ = "orders_details"
@@ -171,11 +188,11 @@ class OrdersDetails(Base):
 
     def __repr__(self):
         return f"<Order {self.order_id} - {self.product_name}>"
-    
+
 class ProductDetails(Base):
     __tablename__ = "product_details"
 
-    id = Column(Integer, primary_key=True)  
+    id = Column(Integer, primary_key=True)
     product_name = Column(String(150))
     code = Column(String(60))
     ean = Column(String(40), index= True)
@@ -184,20 +201,20 @@ class ProductDetails(Base):
 
     def __repr__(self):
         return f"<ProductDetails {self.code} - {self.product_name}>"
-    
+
 class Reservation(Base):
     __tablename__ = 'reservation'
 
-    id = Column(Integer, primary_key=True) 
+    id = Column(Integer, primary_key=True)
     product_name = Column(String(150))
     ean = Column(String(40), index= True)
     amount = Column(BigInteger)
-    reserved_amount = Column(Integer)  
-    available_amount = Column(BigInteger)  
+    reserved_amount = Column(Integer)
+    available_amount = Column(BigInteger)
 
     def __repr__(self):
         return f"<Reservation id={self.id} product_name={self.product_name} ean={self.ean}>"
-    
+
 class DeliveryOrder(Base):
     __tablename__ = "delivery_order"
 
@@ -240,7 +257,7 @@ class Pick(Base):
 
     def __repr__(self):
         return f"<Pick {self.id} - {self.order_number}>"
-    
+
 
 class OrderPickingDetail(Base):
     __tablename__ = 'order_picking_details'
@@ -262,13 +279,13 @@ class OrderPickingDetail(Base):
 
     def __repr__(self):
         return f"<OrderPickingDetail {self.id} - {self.order_number} - {self.product_name}>"
-    
+
 class LocationWeights(Base):
     __tablename__ = 'location_weights'
 
     location = Column(String(10), primary_key=True, nullable=False)
     weightlimitinloc = Column(Integer, nullable=True)
-    actualweightinloc = Column(Numeric(10, 2), nullable=True) 
+    actualweightinloc = Column(Numeric(10, 2), nullable=True)
     limitofamountonloc = Column(Integer, nullable=True)
     actualamountonloc = Column(Integer, nullable=True)
 

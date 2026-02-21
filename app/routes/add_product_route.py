@@ -1,15 +1,15 @@
-from fastapi import APIRouter, HTTPException, Depends
-from app.utils import get_current_user
-from sqlalchemy.orm import Session
-from sqlalchemy.exc import IntegrityError
-from app.database.database import get_db
-from app.warehouse_operations.product_operations import ProductService
-from app.common_schema import ProductSchema, AddCustomer, AddSupplier
-from app.warehouse_operations.add_service import AddService
 import logging
-from sqlalchemy.exc import SQLAlchemyError
-from app.models import ApiResponse
 
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from sqlalchemy.orm import Session
+
+from app.common_schema import AddCustomer, AddSupplier, ProductSchema
+from app.database.database import get_db
+from app.models import ApiResponse
+from app.utils import get_current_user
+from app.warehouse_operations.add_service import AddService
+from app.warehouse_operations.product_operations import ProductService
 
 logger = logging.getLogger(__name__)
 
@@ -24,10 +24,10 @@ def add_product(body: ProductSchema, current_user= Depends(get_current_user), db
         raise HTTPException(status_code= 400, detail= 'Product already exist')
     try:
         product_service.add_product_to_product_details(body.product_name, body.code, body.ean, body.unit_weight, body.purchase_price)
-    except SQLAlchemyError: 
+    except SQLAlchemyError:
         raise HTTPException(status_code= 400, detail= 'Product not added to database')
     return ApiResponse(message = 'Product added to base')
-     
+
 @router.post('/add_customer', response_model = ApiResponse)
 def add_customer(body: AddCustomer, current_user= Depends(get_current_user), db: Session= Depends(get_db)):
     add_service = AddService(db)

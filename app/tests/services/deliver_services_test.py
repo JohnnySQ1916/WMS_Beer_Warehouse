@@ -1,9 +1,11 @@
-from sqlalchemy import text
-import pytest
+from datetime import datetime
 from functools import wraps
+
+import pytest
+from sqlalchemy import text
+
+from app.models import ProductDetails
 from app.warehouse_operations.deliver_services import DeliveryService
-from datetime import datetime, date
-from app.models import Suppliers, ProductDetails
 
 params =[("RADU LEO", "RADUGA LEON BUT. 0,5 L", "5902176770099", 45, "szt ", 0.77, "RI-13-01", "2025-12-09", 0, 45),
                           ("KAZ_MUS_BUT_500", "KAZIMIERZ MUSTAFA BUT. 0,5 L", "5906660570493", 100, "szt ", 0.77, "RK-18-02", "2024-12-09", 0, 100),
@@ -26,7 +28,7 @@ def prepare_test_data(db_session):
         db_session.execute(text("""
             INSERT INTO products (code, product_name, ean, amount, jednostka, unit_weight, location, date, reserved_amount, available_amount)
                                  VALUES (:code, :product_name, :ean, :amount, :jednostka, :unit_weight, :location, :date, :reserved_amount, :available_amount)"""),
-                                {'code': code, 'product_name': product_name, 'ean': ean, 'amount': amount, 'jednostka': jednostka, 'unit_weight': unit_weight, 
+                                {'code': code, 'product_name': product_name, 'ean': ean, 'amount': amount, 'jednostka': jednostka, 'unit_weight': unit_weight,
                                 'location': location, 'date': date, 'reserved_amount': reserved_amount, 'available_amount': available_amount})
         db_session.execute(text("""INSERT INTO product_details (product_name, code, ean, purchase_price, unit_weight) 
                                 VALUES (:product_name, :code, :ean, :purchase_price, :unit_weight)"""), {'product_name': product_name,'code': code,
@@ -35,8 +37,8 @@ def prepare_test_data(db_session):
         db_session.execute(text("""INSERT INTO suppliers (company_name, contact_name, contact_title, address, city, region, 
                                 postal_code, country, phone, homepage)
                                 VALUES(:company_name, :contact_name, :contact_title, :address, :city, :region, :postal_code, 
-                                :country, :phone, :homepage)"""),{'company_name': company_name, 'contact_name': contact_name, 'contact_title': contact_title, 
-                                                                  'address': address, 'city': city, 'region': region, 'postal_code': postal_code, 
+                                :country, :phone, :homepage)"""),{'company_name': company_name, 'contact_name': contact_name, 'contact_title': contact_title,
+                                                                  'address': address, 'city': city, 'region': region, 'postal_code': postal_code,
                                                                   'country': country, 'phone': phone, 'homepage': homepage})
     for _, product_name, ean, amount, *_, reserved_amount, available_amount in params:
         db_session.execute(text("""
@@ -117,7 +119,7 @@ def test_change_ean_status(db_session, prepare_test_data, code, product_name, ea
     delivery_service.create_deliver_details(id, product_name, ean, new_amount)
     delivery_service.change_ean_status(ean, id)
     result = db_session.execute(text('SELECT * FROM  deliver_details WHERE deliver_id = :id AND ean = :ean'), {'id': id, 'ean': ean}).fetchone()
-    assert result.status == 'ean confirmed'
+    assert result.status == 'ean_confirmed'
 
 @parametrize_decorator
 def test_update_products(db_session, prepare_test_data, code, product_name, ean, amount, jednostka, unit_weight, location, date, reserved_amount, available_amount):
@@ -131,7 +133,7 @@ def test_update_products(db_session, prepare_test_data, code, product_name, ean,
     new_amount = 100
     id = delivery_service.create_supplier_deliver(supplier1, '001/08/2025', date_from_supplier)
     delivery_service.create_deliver_details(id, product_name, ean, new_amount)
-    db_session.execute(text('UPDATE deliver_details SET amount = :new_amount, date = :date WHERE ean = :ean AND deliver_id = :deliver_id'), 
+    db_session.execute(text('UPDATE deliver_details SET amount = :new_amount, date = :date WHERE ean = :ean AND deliver_id = :deliver_id'),
                        {'ean': ean, 'deliver_id': id, 'date': date, 'new_amount': new_amount})
     delivery_service.change_ean_status(ean, id)
     target_location = 'RB-02-02'

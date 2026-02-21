@@ -1,14 +1,15 @@
-from app.database.database import get_db
-from sqlalchemy.sql import text
 import datetime
-from sqlalchemy.orm import Session
-from app.warehouse_operations.product_operations import ProductService
-from contextlib import contextmanager
 import logging
-from app.constant.status import OrderStatus, PickingStatus
-from typing import List, Dict
-from sqlalchemy.engine import Row
+from contextlib import contextmanager
 from datetime import date
+from typing import Dict, List
+
+from sqlalchemy.engine import Row
+from sqlalchemy.orm import Session
+from sqlalchemy.sql import text
+
+from app.constant.status import OrderStatus, PickingStatus
+from app.warehouse_operations.product_operations import ProductService
 
 logger = logging.getLogger(__name__)
 
@@ -132,15 +133,15 @@ class ExecuteOrder:
                     reserved_items[key]['taken_amount'] += take_amount
                     reserved_items[key]['location'].append(product.location)
             return reserved_items
-        
+
     #sub-function
     def insert_into_picks(self, order_id: str, product: Row, amount: int, user_id: int):
         picks_query = text("""INSERT INTO picks (user_id, order_id, product_name, amount, date, time, product_id, location, ean)
                                 VALUES (:user_id, :order_id, :product_name, :product_amount, :date, :time, :product_id, :location, :ean)""")
         self.db.execute(picks_query, {'user_id': user_id, 'order_id': order_id, 'product_name': product.product_name,
-                                            'product_amount': amount, 'date': datetime.date.today(), 'time': datetime.datetime.now().strftime("%H:%M:%S"), 
+                                            'product_amount': amount, 'date': datetime.date.today(), 'time': datetime.datetime.now().strftime("%H:%M:%S"),
                                             'product_id': product.id, 'location': product.location, 'ean': product.ean})
-        
+
     #sub-function
     def update_order_details(self, new_collected: int, product: Row, order_id: str) -> None:
         status = PickingStatus.DONE.value if new_collected == product.amount else PickingStatus.PART.value
@@ -148,8 +149,8 @@ class ExecuteOrder:
                 "UPDATE orders_details SET status = :status, collected_amount = :collected WHERE ean = :ean AND order_id = :order_id")
         self.db.execute(order_details_query, {
                             'status': status, 'collected': new_collected, 'ean': product.ean, 'order_id': order_id})
-        
-    #sub-function    
+
+    #sub-function
     def insert_into_order_picking(self, order_id: str, product: Row, amount: int, user_id: str, status: str) -> None:
         order_process_query = text("""INSERT INTO order_picking_details(product_id, product_name, expected_amount, picked_amount, picked_location, 
                                 picked_by, scanned_ean, picked_time, status, order_id, picked_date, expected_ean, product_date)
@@ -158,10 +159,10 @@ class ExecuteOrder:
         self.db.execute(order_process_query, {'product_id': product.id, 'product_name': product.product_name, 'expected_amount': product.amount,
                                                 'picked_amount': amount, 'picked_location': product.location,
                                                 'picked_by': user_id, 'scanned_ean': product.ean, 'picked_time': datetime.datetime.now().strftime("%H:%M:%S"),
-                                                'status': status, 'order_id': order_id, 'picked_date': datetime.date.today(), 'expected_ean': product.ean, 
+                                                'status': status, 'order_id': order_id, 'picked_date': datetime.date.today(), 'expected_ean': product.ean,
                                                 'product_date': product.date})
-        
-    #sub-function    
+
+    #sub-function
     def update_reservation(self, product: Row, amount: int) -> None:
         reservation_query = text("""UPDATE reservation SET amount = amount - :collected, reserved_amount = reserved_amount - :collected WHERE product_name = :product_name AND ean = :product_ean""")
         self.db.execute(reservation_query, {
@@ -173,7 +174,7 @@ class ExecuteOrder:
                     'DELETE FROM products WHERE ean = :ean AND location = :location AND date = :date')
         self.db.execute(delete_row_query, {
                         'ean': product.ean, 'location': product.location, 'date': product.date})
-        
+
     #sub-function
     def delete_row(self, table: str, params: str, operator: str = 'AND') -> None:
             product_service = ProductService(self.db)
@@ -206,30 +207,30 @@ class ExecuteOrder:
 
     def update_when_order_done(self, order_id: str) -> None:
         with transaction(self.db):
-            self.db.execute(text('UPDATE orders SET status = :status WHERE order_id = :order_id'), {'status': OrderStatus.Done.value, 'order_id': order_id})
+            self.db.execute(text('UPDATE orders SET status = :status WHERE order_id = :order_id'), {'status': OrderStatus.DONE.value, 'order_id': order_id})
 
 
     def get_done_products(self, order_id: str) -> None:
         with transaction(self.db):
             product_service = ProductService(self.db)
-            done_products = product_service.fetch_all({'order_id': order_id, 'status':  PickingStatus.DONE}, 'order_picking_details', 
+            done_products = product_service.fetch_all({'order_id': order_id, 'status':  PickingStatus.DONE}, 'order_picking_details',
                                                     arg = 'product_id, product_name, expected_ean, picked_amount, picked_location')
             return done_products
-    
+
     #sub-function
     def update_order_details_reverse(self, product: Row, collected: int, order_id: str) -> None:
         order_details_query = text("UPDATE orders_details SET status = :status, collected_amount = :collected WHERE ean = :ean AND order_id = :order_id")
         self.db.execute(order_details_query, {'status': PickingStatus.UNDONE.value, 'collected': collected - product.picked_amount,
                                                 'ean': product.expected_ean, 'order_id': order_id})
 
-    #sub-function    
+    #sub-function
     def update_reservation_reverse(self, product: Row, order_id: str) -> None:
         product_service = ProductService(self.db)
         reverse_reservation_query = text("""UPDATE reservation SET amount = amount + :collected, reserved_amount = reserved_amount + :collected,
                                             available_amount = available_amount + :collected  WHERE ean = :ean""")
         self.db.execute(reverse_reservation_query, {
                         'collected': product.picked_amount, 'ean': product.expected_ean, 'order_id': order_id})
-    
+
     #sub-function
     def insert_product_back(self, product: Row) -> None:
         insert_back = text("""INSERT INTO products (code, product_name, ean, amount, jednostka, unit_weight, location, date, reserved_amount, available_amount)

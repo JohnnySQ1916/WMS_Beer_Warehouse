@@ -1,5 +1,6 @@
 from enum import Enum
 
+
 class Pallet(str, Enum):
     EURO = 'euro'
     EPN = 'epn'

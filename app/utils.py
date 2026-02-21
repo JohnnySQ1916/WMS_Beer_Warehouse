@@ -1,10 +1,10 @@
-from functools import wraps
-import jwt
-from fastapi import Header, HTTPException, Depends
-from fastapi.security import OAuth2PasswordBearer
 import os
 from datetime import datetime, timedelta
+
+import jwt
 from dotenv import load_dotenv
+from fastapi import Depends, HTTPException
+from fastapi.security import OAuth2PasswordBearer
 
 load_dotenv()
 print("CWD:", os.getcwd())
@@ -58,8 +58,8 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
 #             abort(401, description = 'Expired token. Please log to get new token')
 #         except jwt.InvalidTokenError:
 #             abort(401, description = 'Invalid token. Please log or register')
-        
-#         # g.user_id = payload['user_id']  
+
+#         # g.user_id = payload['user_id']
 #         # return func(*args, **kwargs)
 #         user_id = payload["user_id"]
 #         return func(user_id, *args, **kwargs)

@@ -1,20 +1,20 @@
-import random 
-from app.database.database import get_db
 import datetime
-from sqlalchemy.sql import text
-from decimal import Decimal
-from app.models import OrdersDetails
-from sqlalchemy.orm import Session
-from fastapi import Depends, HTTPException
-from app.warehouse_operations.product_operations import ProductService
-from sqlalchemy.exc import SQLAlchemyError
-from contextlib import contextmanager
 import logging
-from app.constant.status import OrderStatus
-from typing import Optional, List, Dict
-from sqlalchemy.engine import Row
+import random
+from contextlib import contextmanager
 from datetime import date
+from decimal import Decimal
+from typing import Dict, List
+
+from fastapi import HTTPException
 from sqlalchemy import insert
+from sqlalchemy.engine import Row
+from sqlalchemy.orm import Session
+from sqlalchemy.sql import text
+
+from app.constant.status import OrderStatus
+from app.models import OrdersDetails
+from app.warehouse_operations.product_operations import ProductService
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +35,7 @@ class CreateOrder:
     def OrderNOGenerate(self) -> str:
         data = datetime.datetime.now()
         year = data.year
-        month = data.month 
+        month = data.month
         if self.db.get_bind().dialect.name == 'postgresql':
             query = text("""SELECT COUNT (*) FROM orders WHERE EXTRACT(MONTH FROM create_date) = :month
                         AND EXTRACT(YEAR FROM create_date) = :year""")
@@ -83,7 +83,7 @@ class CreateOrder:
                         FROM product_details AS pd JOIN products AS p  ON pd.ean = p.ean WHERE p.amount > 0""")
         products = self.db.execute(query).fetchall()
         return products
-    
+
     #sub-function
     def select_random_products_and_amount(self, selected_products: List[Row], order_id: str) ->List[Dict]:
         order_products = []
@@ -140,13 +140,13 @@ class CreateOrder:
     def update_orders_with_details(self, customer_id: str, amount: int, price: float, weight: float, order_id: str, shipping_date: date) -> None:
         insert_query2 = text("""UPDATE orders SET customer_id = :customer_id, amount = :amount, create_date = :create_date, 
                                 status = :status, price= :price, total_weight= :total_weight, shipping_date = :shipping_date WHERE order_id = :order_id""")
-        self.db.execute(insert_query2, {'customer_id': customer_id, 'amount': amount, 'create_date': datetime.date.today(), 
+        self.db.execute(insert_query2, {'customer_id': customer_id, 'amount': amount, 'create_date': datetime.date.today(),
                                             'status': OrderStatus.UNDONE.value, 'price': price, 'total_weight': weight, 'order_id': order_id, 'shipping_date': shipping_date})
 
 
-    # Funkcja create_order tworzy losowe zamówienie na podstawie ilości różnych produktów zgłoszonych do zamówienia. 
-    # Klient, produkty oraz ich ilości są losowo przyporządkowane. Funkcja została stworzona, gdyż normalne tworzenia zamówienia, 
-    # tak jak to sie odbywa w zakładach pracy, zajmuje za dużo czasu :) Właściwa funkcja zostanie stworzona. 
+    # Funkcja create_order tworzy losowe zamówienie na podstawie ilości różnych produktów zgłoszonych do zamówienia.
+    # Klient, produkty oraz ich ilości są losowo przyporządkowane. Funkcja została stworzona, gdyż normalne tworzenia zamówienia,
+    # tak jak to sie odbywa w zakładach pracy, zajmuje za dużo czasu :) Właściwa funkcja zostanie stworzona.
     def create_random_order(self, item_amount: int, shipping_date: date) -> str:
         product_service = ProductService(self.db)
         with transaction(self.db):
@@ -169,48 +169,48 @@ class CreateOrder:
             weight = product_service.fetch_scalar('SUM(product_weight * amount)', {'order_id': order_id}, 'orders_details')
             self.update_orders_with_details(customer_id, amount, price, weight, order_id, shipping_date)
             return order_id
-        
+
     def insert_single_product_into_orders_details(self, ean: str, amount: int, order_id: str) -> None:
         try:
             with transaction(self.db):
                 product = self.db.execute(text('SELECT * FROM product_details WHERE ean = :ean'), {'ean': ean}).fetchone()
                 self.db.execute(text("""INSERT INTO orders_details (order_id, product_name, code, amount,ean, price_netto, price_brutto, product_weight, total_price, status)
                                     VALUES (:order_id, :product_name, :code, :amount, :ean, :price_netto, :price_brutto, :product_weight, :total_price, :status)"""),
-                                    {'order_id': order_id, 'product_name': product.product_name, 'code': product.code, 'amount': amount, 'ean': ean, 
-                                    'price_netto': product.purchase_price * Decimal(1.3), 
+                                    {'order_id': order_id, 'product_name': product.product_name, 'code': product.code, 'amount': amount, 'ean': ean,
+                                    'price_netto': product.purchase_price * Decimal(1.3),
                                     'price_brutto': (product.purchase_price * Decimal(1.3)) * Decimal(1.23).quantize(Decimal("0.01")), 'product_weight': product.unit_weight,
                                     'total_price': amount * (product.purchase_price * Decimal(1.3)) * Decimal(1.23).quantize(Decimal("0.01")), 'status': OrderStatus.UNCONFIRMED.value})
         except Exception as e:
             logger.exception(f'Errol while ading product to order {order_id}. Error:', e)
             raise
-    
+
     def add_customer_to_order(self, company_name: str, order_id: str) -> None:
         with transaction(self.db):
             customer_id = self.db.execute(text('SELECT customer_id FROM customers WHERE company_name = :company_name'), {'company_name': company_name}).scalar()
             if customer_id is None:
                 raise ValueError('Customer not found')
-            self.db.execute(text('UPDATE orders SET customer_id= :customer_id WHERE order_id = :order_id'), 
+            self.db.execute(text('UPDATE orders SET customer_id= :customer_id WHERE order_id = :order_id'),
                             {'customer_id': customer_id, 'order_id': order_id})
-    
+
     def check_if_ean_exist(self, ean:str) -> bool:
         result = self.db.execute(text('SELECT 1 FROM product_details WHERE ean= :ean'), {'ean': ean}).scalar()
-        if not result: 
+        if not result:
             raise HTTPException(status_code=404, detail= 'There is no such ean in database')
         return True
-    
+
     def check_if_is_enough_amount(self, ean: str, amount: int) -> bool:
         available_amount = self.db.execute(text('SELECT SUM(available_amount) FROM products WHERE ean= :ean'), {'ean': ean}).scalar()
-        if available_amount < amount: 
+        if available_amount < amount:
             raise HTTPException(status_code=404, detail= 'There is not enough amount on warehouse')
         return True
-    
+
     def check_if_order_open(self, order_id: str) -> bool:
         product_service = ProductService(self.db)
         result = product_service.fetch_scalar('status', {'order_id': order_id}, 'orders')
         if result != OrderStatus.UNCONFIRMED:
             raise HTTPException(status_code= 404, detail= 'Order is closed')
         return True
-    
+
     def finish_order(self, order_id: str) -> bool:
         with transaction(self.db):
             product_service = ProductService(self.db)

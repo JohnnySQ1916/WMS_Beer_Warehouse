@@ -1,13 +1,19 @@
-from app.database.database import get_db
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import text
-from app.utils import get_current_user
-from app.warehouse_operations.product_operations import ProductService
-from app.warehouse_operations.execute_order import ExecuteOrder
-from app.common_schema import EanSchema, LocationSchema, DateSchema, AmountSchema, ChooseProductSchema
-from fastapi import FastAPI, HTTPException, Depends, APIRouter
 from sqlalchemy.orm import Session
-from app.warehouse_operations.location_operations import LocationService
+
+from app.common_schema import (
+    AmountSchema,
+    ChooseProductSchema,
+    EanSchema,
+    LocationSchema,
+)
+from app.database.database import get_db
 from app.models import ApiResponse
+from app.utils import get_current_user
+from app.warehouse_operations.execute_order import ExecuteOrder
+from app.warehouse_operations.location_operations import LocationService
+from app.warehouse_operations.product_operations import ProductService
 
 #WPROWADZIC DO WSZYSTKICH CONFIRM ROUTE SPRAWDZANIE STATUSU ORDERS_DETAILS DLA DANEGO EANU CZY POPRZEDNIA CZYNNOSC ZOSTALA ZREALIZOWANA. ŻEBY POTWIERDZANIE AMOUNT NIE MOGLO BYC PRZED POTWIERDZENIEM EANU ALBO LOKALIZACJI
 
@@ -24,8 +30,8 @@ def execute_order_choice(current_user= Depends(get_current_user), db: Session= D
     if not orders:
         raise HTTPException(status_code=404, detail= 'Orders not found')
     return ApiResponse(
-        message = {'Check order': 'If you want to check products on order, enter Check order and put order number to the link',
-        'Order execute': 'If you want execute order, enter into  Start Order and put order number to the link'},
+        message = """Check order: If you want to check products on order, enter Check order and put order number to the link,
+        Order execute: If you want execute order, enter into  Start Order and put order number to the link""",
         data = {'orders': [{
             'order_id': row.order_id,
             'company name': row.company_name,
@@ -35,7 +41,7 @@ def execute_order_choice(current_user= Depends(get_current_user), db: Session= D
             for row in orders
         ]}
     )
-    
+
 
 @router.get('/check_order/{order_id}', response_model = ApiResponse)
 def check_products_on_order(order_id: str, current_user= Depends(get_current_user), db: Session= Depends(get_db)):
@@ -90,7 +96,7 @@ def confirm_location(order_id: str, body: LocationSchema, current_user= Depends(
     return ApiResponse(
         message = f'Enter ean: {first.ean}'
     )
-    
+
 
 @router.post('/confirm_ean/{order_id}', response_model = ApiResponse)
 def confirm_ean(order_id: str, body: EanSchema, current_user= Depends(get_current_user), db: Session= Depends(get_db)):
@@ -105,7 +111,7 @@ def confirm_ean(order_id: str, body: EanSchema, current_user= Depends(get_curren
     return ApiResponse(
         message = 'Enter amount: '
     )
-    
+
 
 @router.post('/confirm_amount/{order_id}', response_model = ApiResponse)
 def confirm_amount(order_id: str, body: AmountSchema, current_user= Depends(get_current_user), db: Session= Depends(get_db)):
@@ -115,7 +121,7 @@ def confirm_amount(order_id: str, body: AmountSchema, current_user= Depends(get_
     user_id = current_user['user_id']
     order = execute.Queue_To_Execute_Order(order_id)
     if not order:
-        raise HTTPException(status_code= 404, detail= f'Brak elementów do zebrania dla zamówienia {order_id}')
+        raise HTTPException(status_code= 404, detail= f'No products to pick up {order_id}')
     first = order[0]
     collected = product_service.fetch_scalar('collected_amount', {'ean': first.ean, 'order_id': order_id}, 'orders_details')
     amount_on_location = product_service.fetch_scalar('amount', {'ean': first.ean, 'location': first.location, 'date': first.date}, 'products')
@@ -128,7 +134,7 @@ def confirm_amount(order_id: str, body: AmountSchema, current_user= Depends(get_
             message = 'Too big number to take. Try again'
         )
     execute.take_product_out_of_base(order_id, first, amount, collected, user_id)
-    if amount + collected == first.amount:   
+    if amount + collected == first.amount:
         return ApiResponse(
             message = 'Product fully completed. Get next product'
         )
@@ -158,7 +164,7 @@ def get_next_product(order_id: str, current_user= Depends(get_current_user), db:
         'Location': first.location,
         'message': f'Confirm location {first.location}'}
     )
-    
+
 
 @router.get('/show_done_products/{order_id}', response_model = ApiResponse)
 def show_done_products(order_id: str, current_user= Depends(get_current_user), db: Session= Depends(get_db)):

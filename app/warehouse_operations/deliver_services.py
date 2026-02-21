@@ -1,13 +1,14 @@
-from app.database.database import get_db
-from sqlalchemy.sql import text
-from datetime import datetime, date, timezone
-from app.models import DeliveryDetail, DeliveryOrder
-from sqlalchemy.orm import Session
-from contextlib import contextmanager
 import logging
-from app.constant.status import DeliverStatus
+from contextlib import contextmanager
+from datetime import date, datetime, timezone
 from typing import List
+
 from sqlalchemy.engine import Row
+from sqlalchemy.orm import Session
+from sqlalchemy.sql import text
+
+from app.constant.status import DeliverStatus
+from app.models import DeliveryDetail
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +52,7 @@ class DeliveryService:
         return DeliverNumber
 
     def check_deliver_to_do(self):
-        result = self.db.execute(text("SELECT * FROM delivery_order WHERE status = :undone OR status = :pending"), 
+        result = self.db.execute(text("SELECT * FROM delivery_order WHERE status = :undone OR status = :pending"),
                                  {'undone': DeliverStatus.UNDONE.value, 'pending': DeliverStatus.PENDING.value}).fetchall()
         return result
 
@@ -77,7 +78,7 @@ class DeliveryService:
             new_item = DeliveryDetail(deliver_id = deliver_id, product_name = product_name, ean = ean, expected_amount = expected_amount)
             self.db.add(new_item)
             return deliver_id
-        
+
     def check_undone_deliver(self, deliver_id: str) ->List[Row]:
         delivery_query = text("SELECT product_name, expected_amount, ean FROM deliver_details WHERE deliver_id = :deliver_id AND status NOT IN (:done, :pending)")
         delivery = self.db.execute(delivery_query, {'deliver_id': deliver_id, 'done': DeliverStatus.DONE.value, 'pending': DeliverStatus.PENDING.value}).fetchall()
@@ -110,7 +111,7 @@ class DeliveryService:
         with transaction(self.db):
             update_deliver_query = text("""UPDATE deliver_details SET user_id = :user_id, target_location = :target_location, deliver_time = :deliver_time, status = :status,
                                     deliver_date = :deliver_date WHERE ean = :ean AND deliver_id = :deliver_id AND target_location IS NULL""")
-            self.db.execute(update_deliver_query, {'user_id': user_id, 'target_location': target_location, 'ean': ean, 'deliver_id': deliver_id, 
+            self.db.execute(update_deliver_query, {'user_id': user_id, 'target_location': target_location, 'ean': ean, 'deliver_id': deliver_id,
                                                 'deliver_time':  datetime.now(timezone.utc), 'status': status, 'deliver_date': date.today()})
 
     def change_ean_status(self, ean: str, deliver_id: str) -> None:
@@ -118,7 +119,7 @@ class DeliveryService:
             update_query = text(
                 "UPDATE deliver_details SET status = :status WHERE deliver_id = :deliver_id AND ean = :ean AND target_location IS NULL")
             self.db.execute(update_query, {'status': DeliverStatus.EAN.value, 'deliver_id': deliver_id, 'ean': ean})
-            
+
 
     def insert_new_row_into_table(self, deliver_id: str, ean: str, user_id: str, total_amount: int):
         with transaction(self.db):
@@ -126,7 +127,7 @@ class DeliveryService:
             product = self.db.execute(product_query, {'deliver_id': deliver_id, 'ean': ean}).fetchone()
             insert_query = text("""INSERT INTO deliver_details (deliver_id, user_id, product_name, ean, expected_amount, status)
                                 VALUES (:deliver_id, :user_id, :product_name, :ean, :expected_amount, :status)""")
-            self.db.execute(insert_query, {'deliver_id': deliver_id, 'user_id': user_id, 
+            self.db.execute(insert_query, {'deliver_id': deliver_id, 'user_id': user_id,
                                                     'product_name': product.product_name, 'ean': ean, 'expected_amount': product.expected_amount - total_amount, 'status': DeliverStatus.UNDONE.value})
 
 

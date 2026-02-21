@@ -1,15 +1,19 @@
-from app.warehouse_operations.product_operations import ProductService
-from app.warehouse_operations.relocate_operation import  RelocationService
-from app.warehouse_operations.location_operations import LocationService
-from marshmallow import Schema, fields
-from app.common_schema import EanSchema, LocationSchema, DateSchema, AmountSchema, ChooseProductSchema
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import text
-from app.database.database import get_db
-from app.utils import  get_current_user
-from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
-from app.models import ApiResponse
 
+from app.common_schema import (
+    AmountSchema,
+    ChooseProductSchema,
+    EanSchema,
+    LocationSchema,
+)
+from app.database.database import get_db
+from app.models import ApiResponse
+from app.utils import get_current_user
+from app.warehouse_operations.location_operations import LocationService
+from app.warehouse_operations.product_operations import ProductService
+from app.warehouse_operations.relocate_operation import RelocationService
 
 router = APIRouter(prefix = '/relocation', tags = ['Relocation'])
 
@@ -70,7 +74,7 @@ def confirm_date_choice(relocation_id: int, body : ChooseProductSchema, current_
     if current not in ('location_confirmed', 'ean_confirmed'):
         raise HTTPException(status_code= 409, detail= 'Location or EAN not confirmed')
     product_id = body.product_id
-    relocation_service.update_date(product_id, relocation_id) 
+    relocation_service.update_date(product_id, relocation_id)
     return ApiResponse(message = 'Enter amount')
 
 
@@ -141,7 +145,7 @@ def get_products_by_location(location: str, current_user= Depends(get_current_us
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code = 500,  detail= str(e))
-    
+
 
 @router.post('/enter_ean/{id}', response_model = ApiResponse)
 def enter_ean(id: int, body : EanSchema, current_user= Depends(get_current_user), db: Session = Depends(get_db)):

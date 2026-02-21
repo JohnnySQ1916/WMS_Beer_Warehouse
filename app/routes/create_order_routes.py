@@ -1,14 +1,11 @@
-from app.database.database import get_db
-from marshmallow import Schema, fields
-from app.routes.product_operation_routes import ProductService
-from app.utils import get_current_user
-from fastapi import Depends, APIRouter, HTTPException
-from app.common_schema import CreateRandomOrder, AddProductToOrder, AddCustomerToOrder
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from app.warehouse_operations.create_order import CreateOrder
-from app.warehouse_operations.add_service import AddService
-from app.constant.status import OrderStatus, PickingStatus
+
+from app.common_schema import AddCustomerToOrder, AddProductToOrder, CreateRandomOrder
+from app.database.database import get_db
 from app.models import ApiResponse
+from app.utils import get_current_user
+from app.warehouse_operations.create_order import CreateOrder
 
 router = APIRouter(prefix = '/create_order', tags= ['Create_order'])
 

@@ -1,13 +1,9 @@
-from marshmallow import Schema, fields, validates, ValidationError, validates_schema, validate
-from sqlalchemy.sql import text
 from datetime import date
-from werkzeug.security import check_password_hash
+from decimal import Decimal
+from typing import List
+
 from pydantic import BaseModel, field_validator
 from pydantic_core.core_schema import FieldValidationInfo
-from fastapi import Depends
-from typing import List
-from sqlalchemy.orm import Session
-from decimal import Decimal
 
 
 class EanSchema(BaseModel):

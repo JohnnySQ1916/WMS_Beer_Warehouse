@@ -1,5 +1,5 @@
-from pathlib import Path
 import os
+from pathlib import Path
 
 base_dir = Path(__file__).resolve().parent
 
@@ -13,13 +13,13 @@ class TestingConfig(Config):
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_DATABASE_URI = os.getenv(
         'SQLALCHEMY_DATABASE_URI',
-        f'sqlite:///:memory:'
+        'sqlite:///:memory:'
     )
 
 class DevelopmentConfig(Config):
     DEBUG = True
     SQLALCHEMY_DATABASE_URI = 'postgresql://postgres:cwks1916@localhost:5432/WMS_One_More_Beer'
-    
+
 
 config = {
     'development': DevelopmentConfig,

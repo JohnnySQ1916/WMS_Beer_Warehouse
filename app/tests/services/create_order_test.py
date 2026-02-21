@@ -1,13 +1,13 @@
-from sqlalchemy import text
-from app.tests.conftest import db_session
-import pytest
+import datetime
 from functools import wraps
+
+import pytest
+from fastapi import HTTPException
+from sqlalchemy import text
+
+from app.models import OrdersDetails, Reservation
 from app.warehouse_operations.create_order import CreateOrder
 from app.warehouse_operations.product_operations import ProductService
-import datetime
-from app.models import OrdersDetails, Reservation
-from fastapi import HTTPException
-
 
 params =[("RADU LEO", "RADUGA LEON BUT. 0,5 L", "5902176770099", 45, "szt ", 0.77, "RI-13-01", "2024-12-09", 0, 45),
                           ("KAZ_MUS_BUT_500", "KAZIMIERZ MUSTAFA BUT. 0,5 L", "5906660570493", 100, "szt ", 0.77, "RK-18-02", "2024-12-09", 0, 100),
@@ -30,7 +30,7 @@ def prepare_test_data(db_session):
         db_session.execute(text("""
             INSERT INTO products (code, product_name, ean, amount, jednostka, unit_weight, location, date, reserved_amount, available_amount)
                                  VALUES (:code, :product_name, :ean, :amount, :jednostka, :unit_weight, :location, :date, :reserved_amount, :available_amount)"""),
-                                {'code': code, 'product_name': product_name, 'ean': ean, 'amount': amount, 'jednostka': jednostka, 'unit_weight': unit_weight, 
+                                {'code': code, 'product_name': product_name, 'ean': ean, 'amount': amount, 'jednostka': jednostka, 'unit_weight': unit_weight,
                                 'location': location, 'date': date, 'reserved_amount': reserved_amount, 'available_amount': available_amount})
         db_session.execute(text("""INSERT INTO product_details (product_name, code, ean, purchase_price, unit_weight) 
                                 VALUES (:product_name, :code, :ean, :purchase_price, :unit_weight)"""), {'product_name': product_name,'code': code,
@@ -38,7 +38,7 @@ def prepare_test_data(db_session):
     for customer_id, company_name, contact_name, contact_title, address, city, postal_code, country, phone, fax in customers:
         db_session.execute(text("""INSERT INTO customers (customer_id, company_name, contact_name, contact_title, address, city, postal_code, country, phone, fax)
                                 VALUES (:customer_id, :company_name, :contact_name, :contact_title, :address, :city, :postal_code, :country, :phone, :fax)"""),
-                                {'customer_id': customer_id, 'company_name': company_name, 'contact_name': contact_name, 'contact_title': contact_title, 
+                                {'customer_id': customer_id, 'company_name': company_name, 'contact_name': contact_name, 'contact_title': contact_title,
                                  'address': address, 'city': city, 'postal_code': postal_code, 'country': country, 'phone': phone, 'fax': fax})
     for _, product_name, ean, amount, *_, reserved_amount, available_amount in params:
         db_session.execute(text("""
