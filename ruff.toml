@@ -1,6 +1,6 @@
-line-length = 88
+line-length = 100
 
 select = ["E", "F", "W", "I"]
-ignore = []
+ignore = ["E501", "W291"]
 
 fix = true

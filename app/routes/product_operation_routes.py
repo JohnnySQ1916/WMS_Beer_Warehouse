@@ -6,13 +6,15 @@ from app.models import ApiResponse
 from app.utils import get_current_user
 from app.warehouse_operations.product_operations import ProductService
 
-router = APIRouter(prefix= '/products', tags = ['Products'])
+router = APIRouter(prefix="/products", tags=["Products"])
 
 
-@router.get('/{ean}', response_model = ApiResponse)
-def get_product_by_ean(ean: str, db: Session = Depends(get_db), current_user= Depends(get_current_user)):
+@router.get("/{ean}", response_model=ApiResponse)
+def get_product_by_ean(
+    ean: str, db: Session = Depends(get_db), current_user=Depends(get_current_user)
+):
     service = ProductService(db)
     product = service.find_product_by_ean(ean)
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
-    return ApiResponse(data = product)
+    return ApiResponse(data=product)

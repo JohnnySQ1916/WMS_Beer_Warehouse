@@ -11,13 +11,18 @@ class LocationService:
         self.db = db
 
     def find_product_by_location(self, location: str) -> List[Row]:
-        query = text("SELECT code, product_name, ean, amount, jednostka, location FROM products WHERE location = :location")
+        query = text(
+            "SELECT code, product_name, ean, amount, jednostka, location FROM products WHERE location = :location"
+        )
         result = self.db.execute(query, {"location": location}).fetchall()
         if not result:
-            raise HTTPException(status_code = 404, detail = 'No product on location')
+            raise HTTPException(status_code=404, detail="No product on location")
         location = [dict(row._mapping) for row in result]
         return location
 
     def check_is_location_in_base(self, location: str) -> bool:
-        query = self.db.execute(text('SELECT COUNT(*) FROM location_weights WHERE location = :location'), {'location': location}).scalar()
+        query = self.db.execute(
+            text("SELECT COUNT(*) FROM location_weights WHERE location = :location"),
+            {"location": location},
+        ).scalar()
         return bool(query)

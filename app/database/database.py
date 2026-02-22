@@ -7,7 +7,7 @@ from sqlalchemy.orm import sessionmaker
 load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
-DATABASE_URL_TEST = os.getenv('DATABASE_URL_TEST')
+DATABASE_URL_TEST = os.getenv("DATABASE_URL_TEST")
 
 # Tworzymy silnik SQLAlchemy
 engine = create_engine(DATABASE_URL)
@@ -20,6 +20,7 @@ test_engine = create_engine(DATABASE_URL_TEST)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 TestSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
 
+
 # Funkcja pomocnicza do uzyskania sesji (używana w FastAPI)
 def get_db():
     db = SessionLocal()
@@ -29,11 +30,6 @@ def get_db():
         db.close()
 
 
-
-
-
-
 # from flask_sqlalchemy import SQLAlchemy
 
 # db = SQLAlchemy()
-

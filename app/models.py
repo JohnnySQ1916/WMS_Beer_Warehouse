@@ -1,5 +1,4 @@
-import os
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 from typing import Any, Optional
 
 from pydantic import BaseModel
@@ -29,14 +28,14 @@ from app.utils import create_jwt_token
 
 
 class Products(Base):
-    __tablename__ = 'products'
+    __tablename__ = "products"
     code = Column(String(60), nullable=False)
     product_name = Column(String(150), nullable=False)
-    ean = Column(String(13), nullable=False, index= True)
+    ean = Column(String(13), nullable=False, index=True)
     amount = Column(Integer, nullable=False)
     jednostka = Column(String(4), nullable=False)
     unit_weight = Column(Numeric(precision=10, scale=2))
-    location = Column(String(10), index= True)
+    location = Column(String(10), index=True)
     date = Column(Date, nullable=False)
     reserved_amount = Column(Integer)
     available_amount = Column(Integer, nullable=False)
@@ -54,26 +53,28 @@ class Products(Base):
     @staticmethod
     def validation_date(date):
         if date <= datetime.today().date() + datetime.timedelta(days=90):
-            raise ValueError('Date is too short')
-        if not isinstance(value, datetime.date):
+            raise ValueError("Date is too short")
+        if not isinstance(date, datetime.date):
             raise ValueError("Invalid date format.")
 
     def to_dict(self):
-        return{
-            'Code': self.code,
-            'Product_name': self.product_name,
-            'Amount': self.amount,
-            'EAN': self.ean,
-            'Location': self.location
+        return {
+            "Code": self.code,
+            "Product_name": self.product_name,
+            "Amount": self.amount,
+            "EAN": self.ean,
+            "Location": self.location,
         }
 
 
-class ConfirmProductsSchema(EanSchema, LocationSchema, AmountSchema, DateSchema, ChooseProductSchema):
+class ConfirmProductsSchema(
+    EanSchema, LocationSchema, AmountSchema, DateSchema, ChooseProductSchema
+):
     pass
 
 
 class Users(Base):
-    __tablename__ = 'users'
+    __tablename__ = "users"
     id = Column(Integer, primary_key=True)
     user_id = Column(String(2), nullable=False, unique=True, index=True)
     user_name = Column(String(50), nullable=False, unique=True)
@@ -87,21 +88,22 @@ class Users(Base):
         return check_password_hash(self.password, password)
 
     def generate_jwt(self):
-        expire_minutes = int(os.getenv("JWT_EXPIRED_MINUTES", 60))
-        secret = os.getenv("JWT_SECRET", "defaultsecret")
-        payload = {
-            'user_id': self.user_id,
-            'exp': datetime.utcnow() + timedelta(minutes=expire_minutes)
-        }
-        # return jwt.encode(payload, secret, algorithm='HS256')
+        # expire_minutes = int(os.getenv("JWT_EXPIRED_MINUTES", 60))
+        # secret = os.getenv("JWT_SECRET", "defaultsecret")
+        # payload = {
+        #     "user_id": self.user_id,
+        #     "exp": datetime.utcnow() + timedelta(minutes=expire_minutes),
+        # }
+        # # return jwt.encode(payload, secret, algorithm='HS256')
         return create_jwt_token(str(self.user_id))
 
+
 class Relocate(Base):
-    __tablename__ = 'relocation'
+    __tablename__ = "relocation"
     id = Column(Integer, primary_key=True)
-    initial_location = Column(String, nullable=True, index= True)
+    initial_location = Column(String, nullable=True, index=True)
     product_name = Column(String, nullable=True)
-    ean = Column(String, nullable=True, index= True)
+    ean = Column(String, nullable=True, index=True)
     amount = Column(Integer, nullable=True)
     target_location = Column(String, nullable=True)
     user_id = Column(String, nullable=True)
@@ -112,10 +114,11 @@ class Relocate(Base):
     def __repr__(self):
         return f"<Relocation {self.id} {self.product_name} {self.amount}>"
 
-class Customer(Base):
-    __tablename__ = 'customers'
 
-    customer_id = Column(String(15), primary_key=True, nullable=False, index = True)
+class Customer(Base):
+    __tablename__ = "customers"
+
+    customer_id = Column(String(15), primary_key=True, nullable=False, index=True)
     company_name = Column(String(40), nullable=False)
     contact_name = Column(String(30))
     contact_title = Column(String(30))
@@ -135,10 +138,10 @@ class DeliveryDetail(Base):
     __tablename__ = "deliver_details"
 
     id = Column(Integer, primary_key=True)
-    deliver_id = Column(String, ForeignKey('delivery_order.deliver_id'), nullable=True,  index= True)
+    deliver_id = Column(String, ForeignKey("delivery_order.deliver_id"), nullable=True, index=True)
     user_id = Column(String, nullable=True)
     product_name = Column(String, nullable=True)
-    ean = Column(String, nullable=True, index= True)
+    ean = Column(String, nullable=True, index=True)
     expected_amount = Column(Integer, nullable=True)
     amount = Column(Integer, nullable=True)
     date = Column(Date, nullable=True)
@@ -146,7 +149,7 @@ class DeliveryDetail(Base):
     status = Column(String, default="undone", nullable=True)
     target_location = Column(String, nullable=True)
     deliver_date = Column(Date, nullable=True)
-    parent_delivery = relationship('DeliveryOrder', back_populates = 'details')
+    parent_delivery = relationship("DeliveryOrder", back_populates="details")
 
     def __repr__(self):
         return f"<DeliveryDetail id={self.id}, product={self.product_name}, ean={self.ean}, status={self.status}>"
@@ -154,7 +157,7 @@ class DeliveryDetail(Base):
 
 class Order(Base):
     __tablename__ = "orders"
-    order_id = Column(String(15), primary_key=True, nullable=False, index= True)
+    order_id = Column(String(15), primary_key=True, nullable=False, index=True)
     customer_id = Column(String(15), nullable=True)
     amount = Column(Integer, nullable=True)
     create_date = Column(Date, nullable=False, default=date.today)
@@ -163,7 +166,7 @@ class Order(Base):
     total_weight = Column(Numeric(7, 2), nullable=True)
     pallet_used = Column(String(15), nullable=True)
     shipping_date = Column(Date, nullable=True)
-    details = relationship('OrdersDetails', back_populates= 'parent_order')
+    details = relationship("OrdersDetails", back_populates="parent_order")
 
     def __repr__(self):
         return f"<Order {self.order_id} - {self.customer_id}>"
@@ -173,21 +176,22 @@ class OrdersDetails(Base):
     __tablename__ = "orders_details"
 
     id = Column(Integer, primary_key=True)
-    order_id = Column(String(15), ForeignKey('orders.order_id'), index= True)
+    order_id = Column(String(15), ForeignKey("orders.order_id"), index=True)
     product_name = Column(String(100))
     code = Column(String(60))
     amount = Column(Integer)
-    ean = Column(String(20), index= True)
+    ean = Column(String(20), index=True)
     price_netto = Column(Numeric(7, 2, asdecimal=False))
     price_brutto = Column(Numeric(10, 2, asdecimal=False))
     product_weight = Column(Numeric(5, 2, asdecimal=False))
     total_price = Column(Numeric(10, 2, asdecimal=False))
     status = Column(String, default="undone")
     collected_amount = Column(Integer, default=0)
-    parent_order = relationship('Order', back_populates = 'details')
+    parent_order = relationship("Order", back_populates="details")
 
     def __repr__(self):
         return f"<Order {self.order_id} - {self.product_name}>"
+
 
 class ProductDetails(Base):
     __tablename__ = "product_details"
@@ -195,19 +199,20 @@ class ProductDetails(Base):
     id = Column(Integer, primary_key=True)
     product_name = Column(String(150))
     code = Column(String(60))
-    ean = Column(String(40), index= True)
+    ean = Column(String(40), index=True)
     unit_weight = Column(Numeric(6, 2))
     purchase_price = Column(Numeric(6, 2), default=10)
 
     def __repr__(self):
         return f"<ProductDetails {self.code} - {self.product_name}>"
 
+
 class Reservation(Base):
-    __tablename__ = 'reservation'
+    __tablename__ = "reservation"
 
     id = Column(Integer, primary_key=True)
     product_name = Column(String(150))
-    ean = Column(String(40), index= True)
+    ean = Column(String(40), index=True)
     amount = Column(BigInteger)
     reserved_amount = Column(Integer)
     available_amount = Column(BigInteger)
@@ -215,21 +220,23 @@ class Reservation(Base):
     def __repr__(self):
         return f"<Reservation id={self.id} product_name={self.product_name} ean={self.ean}>"
 
+
 class DeliveryOrder(Base):
     __tablename__ = "delivery_order"
 
-    deliver_id = Column(String, primary_key=True, nullable=False, index = True)
+    deliver_id = Column(String, primary_key=True, nullable=False, index=True)
     supplier = Column(String)
     delivery_date = Column(Date)
-    status = Column(String, default='undone')
+    status = Column(String, default="undone")
     deliver_external_number = Column(String)
     create_date = Column(Date)
-    details = relationship('DeliveryDetail', back_populates = 'parent_delivery')
+    details = relationship("DeliveryDetail", back_populates="parent_delivery")
+
 
 class Suppliers(Base):
-    __tablename__ = 'suppliers'
+    __tablename__ = "suppliers"
 
-    supplier_id = Column(Integer, primary_key=True, autoincrement=True, index= True)
+    supplier_id = Column(Integer, primary_key=True, autoincrement=True, index=True)
     company_name = Column(String(40), nullable=False)
     contact_name = Column(String(30))
     contact_title = Column(String(30))
@@ -241,29 +248,30 @@ class Suppliers(Base):
     phone = Column(String(24))
     homepage = Column(String(24))
 
+
 class Pick(Base):
-    __tablename__ = 'picks'
+    __tablename__ = "picks"
 
     id = Column(Integer, primary_key=True)
     user_id = Column(String, nullable=True)
-    order_id = Column(String, nullable=True, index= True)
+    order_id = Column(String, nullable=True, index=True)
     product_name = Column(String, nullable=True)
     amount = Column(Integer, nullable=True)
     date = Column(Date, nullable=True)
     time = Column(TIME(timezone=True), nullable=True)
     product_id = Column(Integer, nullable=True)
     location = Column(String, nullable=True)
-    ean = Column(String(40), index= True)
+    ean = Column(String(40), index=True)
 
     def __repr__(self):
         return f"<Pick {self.id} - {self.order_number}>"
 
 
 class OrderPickingDetail(Base):
-    __tablename__ = 'order_picking_details'
+    __tablename__ = "order_picking_details"
 
     id = Column(Integer, primary_key=True)
-    product_id = Column(Integer, nullable=True, index= True)
+    product_id = Column(Integer, nullable=True, index=True)
     product_name = Column(String, nullable=True)
     expected_amount = Column(Integer, nullable=True)
     picked_amount = Column(Integer, nullable=True)
@@ -272,7 +280,7 @@ class OrderPickingDetail(Base):
     scanned_ean = Column(String, nullable=True)
     picked_time = Column(TIME(timezone=True), nullable=True)
     status = Column(String, nullable=True)
-    order_id = Column(String, nullable=True, index= True)
+    order_id = Column(String, nullable=True, index=True)
     picked_date = Column(Date, nullable=True)
     expected_ean = Column(String, nullable=True)
     product_date = Column(Date, nullable=True)
@@ -280,8 +288,9 @@ class OrderPickingDetail(Base):
     def __repr__(self):
         return f"<OrderPickingDetail {self.id} - {self.order_number} - {self.product_name}>"
 
+
 class LocationWeights(Base):
-    __tablename__ = 'location_weights'
+    __tablename__ = "location_weights"
 
     location = Column(String(10), primary_key=True, nullable=False)
     weightlimitinloc = Column(Integer, nullable=True)
@@ -292,6 +301,7 @@ class LocationWeights(Base):
     def __repr__(self):
         return f"""<LocationWeights(location='{self.location}', weightlimitinloc={self.weightlimitinloc}, actualweightinloc={self.actualweightinloc}, 
         limitofamountonloc={self.limitofamountonloc}, actualamountonloc={self.actualamountonloc})>"""
+
 
 class ApiResponse(BaseModel):
     success: bool = True

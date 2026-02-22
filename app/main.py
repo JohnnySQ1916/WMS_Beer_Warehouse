@@ -1,11 +1,9 @@
-# from app.database.database import get_db
 import os
 
 from dotenv import load_dotenv
 from fastapi import APIRouter, FastAPI
 
 from app.auth.auth import router as auth_router
-from app.config import config
 from app.routes.add_product_route import router as add_product_router
 from app.routes.create_order_routes import router as create_order_router
 from app.routes.delivery_routes import router as delivery_router
@@ -16,15 +14,16 @@ from app.routes.relocation_routes import router as relocation_router
 
 load_dotenv()
 
+
 class Config:
-    SQLALCHEMY_DATABASE_URI = os.getenv(
-        'DATABASE_URL') or os.getenv('SQLALCHEMY_DATABASE_URI')
-    SECRET_KEY = os.getenv('SECRET_KEY')
+    SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL") or os.getenv("SQLALCHEMY_DATABASE_URI")
+    SECRET_KEY = os.getenv("SECRET_KEY")
+
 
 class TestingConfig(Config):
     TESTING = True
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
+    SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
 
 
 class DevelopmentConfig(Config):
@@ -32,18 +31,14 @@ class DevelopmentConfig(Config):
     # SQLALCHEMY_DATABASE_URI = os.getenv('DEV_DATABASE_URL')
 
 
-config = {
-    'development': DevelopmentConfig,
-    'testing': TestingConfig
-}
-
+config = {"development": DevelopmentConfig, "testing": TestingConfig}
 
 
 # Tworzymy instancję FastAPI
 app = FastAPI(
     title="WMS One More Beer",
     description="Warehouse Management System API",
-    version="1.0.0"
+    version="1.0.0",
 )
 api_v1 = APIRouter(prefix="/api/v1")
 
@@ -58,6 +53,7 @@ api_v1.include_router(add_product_router)
 api_v1.include_router(create_order_router)
 
 app.include_router(api_v1)
+
 
 # Opcjonalnie: endpoint testowy
 @app.get("/")

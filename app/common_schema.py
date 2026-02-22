@@ -9,10 +9,10 @@ from pydantic_core.core_schema import FieldValidationInfo
 class EanSchema(BaseModel):
     ean: str
 
-    @field_validator('ean')
+    @field_validator("ean")
     def validate_ean(cls, value):
         if not value.isdigit() or len(value) != 13:
-            raise ValueError('EAN has to be consist of 13 character')
+            raise ValueError("EAN has to be consist of 13 character")
         return value
 
 
@@ -23,10 +23,10 @@ class ProductSchema(BaseModel):
     unit_weight: Decimal
     purchase_price: Decimal
 
-    @field_validator('ean')
+    @field_validator("ean")
     def validate_ean(cls, value):
         if not value.isdigit() or len(value) != 13:
-            raise ValueError('EAN has to be consist of 13 character')
+            raise ValueError("EAN has to be consist of 13 character")
         return value
 
 
@@ -38,25 +38,26 @@ class AmountSchema(BaseModel):
     amount: int
     force: bool = False
 
-    @field_validator('amount')
+    @field_validator("amount")
     def validate_amount(cls, value):
         if value <= 0:
-            raise ValueError('Amount has to be over 0')
+            raise ValueError("Amount has to be over 0")
         return value
 
 
 class DateSchema(BaseModel):
     date: date
 
-    @field_validator('date')
+    @field_validator("date")
     def validate_date(cls, value):
         if value <= date.today():
-            raise ValueError('Date has to be bigger than today')
+            raise ValueError("Date has to be bigger than today")
         return value
 
 
 class ChooseProductSchema(BaseModel):
     product_id: int
+
 
 # napisac funkcje w klasie sprawdzające czy dany uzytkownik jest w bazie dancyh
 
@@ -67,17 +68,16 @@ class AuthRegisterSchema(BaseModel):
     password: str
     # password = fields.Str(required = True, load_only=True, validate=validate.Length(min=1, max=4))
 
-    @field_validator('user_id')
+    @field_validator("user_id")
     def validate_user_id(cls, value):
         if len(value) != 2:
-            raise ValueError('User_id is the persons initials')
+            raise ValueError("User_id is the persons initials")
         return value
 
-    @field_validator('password', mode='after')
+    @field_validator("password", mode="after")
     def validate_password_lenght(cls, value, info: FieldValidationInfo):
         if len(value) < 1 or len(value) > 4:
-            raise ValueError(
-                'Password has to be over than 0 charackter and below 4')
+            raise ValueError("Password has to be over than 0 charackter and below 4")
         return value
 
 
@@ -85,10 +85,10 @@ class AuthLoginSchema(BaseModel):
     user_id: str
     password: str
 
-    @field_validator('user_id')
+    @field_validator("user_id")
     def validate_user_id(cls, value):
         if len(value) != 2:
-            raise ValueError('User_id is the persons initials')
+            raise ValueError("User_id is the persons initials")
         return value
 
 
@@ -103,16 +103,16 @@ class DeliverCreateDetails(BaseModel):
     ean: str
     expected_amount: int
 
-    @field_validator('ean')
+    @field_validator("ean")
     def validate_ean(cls, value):
         if not value.isdigit() or len(value) != 13:
-            raise ValueError('EAN must consist of 13 exactly digits')
+            raise ValueError("EAN must consist of 13 exactly digits")
         return value
 
-    @field_validator('expected_amount')
+    @field_validator("expected_amount")
     def validate_amount(cls, value):
         if value <= 0:
-            raise ValueError('Amount must be greater than 0')
+            raise ValueError("Amount must be greater than 0")
         return value
 
 
@@ -124,10 +124,10 @@ class CreateRandomOrder(BaseModel):
     amount: int
     shipping_date: date
 
-    @field_validator('shipping_date')
+    @field_validator("shipping_date")
     def validate_date(cls, value):
         if value <= date.today():
-            raise ValueError('Shipping date must be in future')
+            raise ValueError("Shipping date must be in future")
         return value
 
 
@@ -135,16 +135,16 @@ class AddProductToOrder(BaseModel):
     amount: int
     ean: str
 
-    @field_validator('amount')
+    @field_validator("amount")
     def validate_amount(cls, value):
         if value <= 0:
-            raise ValueError('Amount must be greater than 0')
+            raise ValueError("Amount must be greater than 0")
         return value
 
-    @field_validator('ean')
+    @field_validator("ean")
     def validate_ean(cls, value):
         if not value.isdigit() or len(value) != 13:
-            raise ValueError('EAN must consist of 13 exactly digits')
+            raise ValueError("EAN must consist of 13 exactly digits")
         return value
 
 

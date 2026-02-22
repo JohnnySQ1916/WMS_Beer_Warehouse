@@ -13,7 +13,7 @@ print("CWD:", os.getcwd())
 #         raise HTTPException(status_code=401, detail="Unauthorized")
 #     return True
 
-SECRET_KEY = os.getenv("JWT_SECRET", os.getenv('SECRET_KEY'))
+SECRET_KEY = os.getenv("JWT_SECRET", os.getenv("SECRET_KEY"))
 # SECRET_KEY = "ABCD"
 EXPIRE_MINUTES = int(os.getenv("JWT_EXPIRED_MINUTES", 60))
 
@@ -21,10 +21,11 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")  # ścieżka do log
 
 print(f"DEBUG: SECRET_KEY is {SECRET_KEY}")
 
+
 def create_jwt_token(user_id: str):
     payload = {
         "user_id": user_id,
-        "exp": datetime.utcnow() + timedelta(minutes=EXPIRE_MINUTES)
+        "exp": datetime.utcnow() + timedelta(minutes=EXPIRE_MINUTES),
     }
     token = jwt.encode(payload, SECRET_KEY, algorithm="HS256")
     return token
@@ -41,6 +42,7 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
         raise HTTPException(status_code=401, detail="Token expired")
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Invalid token")
+
 
 # def token_required(func):
 #     @wraps(func)
