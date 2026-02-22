@@ -5,7 +5,7 @@ from decimal import Decimal
 from typing import Any, List
 
 from fastapi import HTTPException
-from sqlalchemy import text
+from sqlalchemy import text, inspect
 from sqlalchemy.engine import Row
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -35,10 +35,25 @@ def transaction(db: Session):
 class ProductService:
     def __init__(self, db: Session):
         self.db = db
-        result = self.db.execute(
-            text("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'")
-        ).fetchall()
-        self.white_list = {row[0] for row in result}
+        inspector = inspect(self.db.bind)
+        self.white_list = set(inspector.get_table_names())
+        # dialect = self.db.bind.dialect.name
+        # if dialect == "postgresql":
+        #     result = self.db.execute(
+        #         text("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'")
+        #     ).fetchall()
+            
+        # elif dialect == "sqlite":
+        #     result = self.db.execute(
+        #         text(
+        #             "SELECT name FROM sqlite_master "
+        #             "WHERE type='table'"
+        #         )
+        #     ).fetchall()
+
+        # else:
+        #     result = []
+        # self.white_list = {row[0] for row in result}
 
     def add_product_to_product_details(
         self,
