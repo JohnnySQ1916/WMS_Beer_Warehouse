@@ -38,7 +38,7 @@ def execute_order_choice(current_user=Depends(get_current_user), db: Session = D
                     "order_id": row.order_id,
                     "company name": row.company_name,
                     "amount": row.amount,
-                    "total_weight": row.total_weight,
+                    "total_weight": str(row.total_weight),
                 }
                 for row in orders
             ]
