@@ -13,6 +13,7 @@ jobs:
     env:
       DATABASE_URL: sqlite:///./test.db
       DATABASE_URL_TEST: sqlite:///./test.db
+      JWT_SECRET: supersecretfortests
 
     steps:
     - name: Checkout repository
