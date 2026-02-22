@@ -1,5 +1,5 @@
 from datetime import date as dt
-from datetime import timedelta
+from datetime import timedelta, datetime
 from functools import wraps
 
 import pytest
@@ -564,7 +564,7 @@ def test_enter_ean_delivery_positive(
                 "Product name": row.product_name,
                 "Amount": row.amount,
                 "Location": row.location,
-                "Date": row.date.strftime("%Y-%m-%d"),
+                "Date": str(row.date),
             }
             for row in ean_location
         ],

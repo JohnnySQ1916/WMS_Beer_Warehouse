@@ -122,7 +122,7 @@ def enter_ean_delivery(
                         "Product name": row.product_name,
                         "Amount": row.amount,
                         "Location": row.location,
-                        "Date": row.date,
+                        "Date": str(row.date),
                     }
                     for row in ean_location
                 ],
