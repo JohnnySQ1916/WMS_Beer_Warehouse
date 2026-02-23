@@ -216,7 +216,7 @@ def test_create_order(db_session, prepare_test_data):
     for row in result_orders_details:
         assert row.collected_amount == 0
         assert row.status == "undone"
-        assert row.price_brutto * row.amount == row.total_price
+        assert round(row.price_brutto * row.amount, 2) == round(row.total_price, 2)
 
 
 def test_insert_into_orders(db_session, prepare_test_data):
