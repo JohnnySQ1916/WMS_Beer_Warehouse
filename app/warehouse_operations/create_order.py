@@ -45,7 +45,7 @@ class CreateOrder:
         elif self.db.get_bind().dialect.name == "sqlite":
             query = text("""SELECT COUNT(*) FROM orders WHERE strftime('%m', create_date) = :month
                             AND strftime('%Y', create_date) = :year""")
-            AmountOfOrder = self.db.execute(query, {"month": month, "year": year}).scalar()
+            AmountOfOrder = self.db.execute(query, {"month": str(month), "year": str(year)}).scalar()
         orderNO = AmountOfOrder + 1
         order_id = f"ZO-{orderNO:03}-{month:02}-{year}"
         checking_query = text("SELECT order_id FROM orders WHERE order_id = :order_id")
@@ -140,18 +140,7 @@ class CreateOrder:
     # sub-function
     def insert_products_into_orders_details(self, order_products: str) -> None:
         self.db.execute(insert(OrdersDetails), order_products)
-        # for i in order_products:
-        #         new_item = OrdersDetails(
-        #         order_id=i["order_id"],
-        #         product_name=i["product_name"],
-        #         code=i["code"],
-        #         amount=i["amount"],
-        #         ean=i["ean"],
-        #         price_netto=i["price_netto"],
-        #         price_brutto=i["price_brutto"],
-        #         product_weight=i["product_weight"],
-        #         total_price=i["total_price"])
-        #         self.db.add(new_item)
+
 
     # sub-function
     def make_reservation_for_order(self, order_id: str) -> None:
