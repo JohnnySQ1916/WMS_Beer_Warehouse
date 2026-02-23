@@ -187,7 +187,7 @@ def test_OrderNOGenerate_already_exist(db_session):
     today = datetime.date.today()
     db_session.execute(
         text("INSERT INTO orders (order_id, create_date) VALUES (:order_id, :create_date)"),
-        {"order_id": "ZO-001", "create_date": today},
+        {"order_id": "ZO-001-{today.month:02}-{today.year}", "create_date": today},
     )
     db_session.commit()
     create_service = CreateOrder(db_session)

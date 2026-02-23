@@ -45,7 +45,7 @@ class CreateOrder:
         elif self.db.get_bind().dialect.name == "sqlite":
             query = text("""SELECT COUNT(*) FROM orders WHERE strftime('%m', create_date) = :month
                             AND strftime('%Y', create_date) = :year""")
-            AmountOfOrder = self.db.execute(query, {"month": str(month), "year": str(year)}).scalar()
+            AmountOfOrder = self.db.execute(query, {"month": f'month:02'), "year": str(year)}).scalar()
         orderNO = AmountOfOrder + 1
         order_id = f"ZO-{orderNO:03}-{month:02}-{year}"
         checking_query = text("SELECT order_id FROM orders WHERE order_id = :order_id")
