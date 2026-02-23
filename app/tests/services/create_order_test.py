@@ -191,12 +191,10 @@ def test_OrderNOGenerate_already_exist(db_session):
     )
     db_session.commit()
     create_service = CreateOrder(db_session)
-    result = create_service.OrderNOGenerate()
-    data = datetime.datetime.now()
-    year = data.year
-    month = data.month
-    number = f"ZO-002-{month:02}-{year}"
-    assert result == number
+    with pytest.raises(ValueError) as exc_info:
+        create_service.OrderNOGenerate()
+    assert "ZO-001" in str(exc_info.value)
+    assert "Wygenerowany numer zamówienia" in str(exc_info.value)
 
 
 def test_create_order(db_session, prepare_test_data):
