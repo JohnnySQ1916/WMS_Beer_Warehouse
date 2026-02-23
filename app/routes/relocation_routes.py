@@ -172,7 +172,7 @@ def get_products_by_location(
         relocation_id = relocation_service.new_record_relocation_by_location(location, user_id)
         if product:
             return ApiResponse(
-                data={"product": product, "id": relocation_id, "message": "Enter ean"},
+                data={"product": product, "id": relocation_id},
                 message= "Enter ean"
             )
     except Exception as e:

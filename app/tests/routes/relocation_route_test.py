@@ -391,8 +391,9 @@ def test_get_product_by_location(
     print(response_data)
     assert response.status_code == 200
     assert response_data["message"] == "Enter ean"
-    assert response_data["id"] == id
-    assert response_data["product"] == product
+
+    assert response_data['data']["id"] == id
+    assert response_data['data']["product"] == product
 
 
 # @parametrize_decorator
