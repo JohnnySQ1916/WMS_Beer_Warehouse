@@ -208,7 +208,7 @@ def test_create_order(db_session, prepare_test_data):
     ).fetchone()
     result_orders_details = db_session.query(OrdersDetails).all()
     db_session.query(Reservation).all()
-    assert result_orders.create_date == datetime.date.today()
+    assert result_orders.create_date == datetime.date.today().isoformat()
     assert result_orders.status == "undone"
     assert result_orders.price > 0
     assert result_orders.total_weight > 0
