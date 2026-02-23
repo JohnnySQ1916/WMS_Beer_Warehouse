@@ -5,7 +5,7 @@ from contextlib import contextmanager
 from datetime import date
 from decimal import Decimal
 from typing import Dict, List
-
+import decimal
 from fastapi import HTTPException
 from sqlalchemy import insert
 from sqlalchemy.engine import Row
@@ -29,10 +29,14 @@ def transaction(db: Session):
         logger.exception(f"Bład w transakcji: {e}")
         raise
 
-
 class CreateOrder:
     def __init__(self, db: Session):
         self.db = db
+
+    def to_db_number(self, value):
+        if self.db.get_bind().dialect.name == "sqlite":
+            return float(value)
+        return value
 
     def OrderNOGenerate(self) -> str:
         data = datetime.datetime.now()
@@ -242,18 +246,18 @@ class CreateOrder:
                         "code": product.code,
                         "amount": amount,
                         "ean": ean,
-                        "price_netto": product.purchase_price * Decimal(1.3),
-                        "price_brutto": (product.purchase_price * Decimal(1.3))
-                        * Decimal(1.23).quantize(Decimal("0.01")),
+                        "price_netto": self.to_db_number(product.purchase_price * Decimal(1.3)),
+                        "price_brutto": self.to_db_number((product.purchase_price * Decimal(1.3))
+                        * Decimal(1.23).quantize(Decimal("0.01"))),
                         "product_weight": product.unit_weight,
-                        "total_price": amount
+                        "total_price": self.to_db_number(amount
                         * (product.purchase_price * Decimal(1.3))
-                        * Decimal(1.23).quantize(Decimal("0.01")),
+                        * Decimal(1.23).quantize(Decimal("0.01"))),
                         "status": OrderStatus.UNCONFIRMED.value,
                     },
                 )
         except Exception as e:
-            logger.exception(f"Errol while ading product to order {order_id}. Error:", e)
+            logger.exception(f"Error while adding product to order {order_id}.")
             raise
 
     def add_customer_to_order(self, company_name: str, order_id: str) -> None:
