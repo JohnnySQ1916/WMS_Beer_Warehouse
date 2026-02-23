@@ -227,7 +227,7 @@ def test_insert_into_orders(db_session, prepare_test_data):
         text("SELECT * FROM orders WHERE order_id = :order_id"), {"order_id": order_id}
     ).fetchone()
     assert result.status == "unconfirmed"
-    assert result.create_date == datetime.date.today()
+    assert result.create_date == datetime.date.today().isoformat()
 
 
 @parametrize_decorator
