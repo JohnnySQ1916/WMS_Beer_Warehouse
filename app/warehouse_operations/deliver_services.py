@@ -32,15 +32,15 @@ class DeliveryService:
         data = datetime.now()
         year = data.year
         month = data.month
-        if self.db.bind.dialect.name == "postgresql":
+        if self.db.get_bind().dialect.name == "postgresql":
             # Pobranie liczby zamówieni z danego miesiaca
             query = text("""SELECT COUNT (*) FROM delivery_order WHERE EXTRACT(MONTH FROM create_date) = :month
                         AND EXTRACT(YEAR FROM create_date) = :year""")
             AmountOfOrder = self.db.execute(query, {"month": month, "year": year}).scalar()
-        elif self.db.bind.dialect.name == "sqlite":
+        elif self.db.get_bind().dialect.name == "sqlite":
             query = text("""SELECT COUNT (*) FROM delivery_order WHERE strftime('%m', create_date) = :month
                         AND strftime('%Y', create_date) = :year""")
-            AmountOfOrder = self.db.execute(query, {"month": month, "year": year}).scalar()
+            AmountOfOrder = self.db.execute(query, {"month": f'{month:02}', "year": year}).scalar()
         orderNO = AmountOfOrder + 1
         DeliverNumber = f"PZ-{orderNO:03}-{month:02}-{year}"
         # Sprawdzenie, czy numer zamówienia jest unikalny
