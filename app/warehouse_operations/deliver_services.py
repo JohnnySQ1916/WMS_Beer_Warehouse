@@ -32,25 +32,43 @@ class DeliveryService:
         data = datetime.now()
         year = data.year
         month = data.month
-        if self.db.get_bind().dialect.name == "postgresql":
-            # Pobranie liczby zamówieni z danego miesiaca
-            query = text("""SELECT COUNT (*) FROM delivery_order WHERE EXTRACT(MONTH FROM create_date) = :month
-                        AND EXTRACT(YEAR FROM create_date) = :year""")
-            AmountOfOrder = self.db.execute(query, {"month": month, "year": year}).scalar()
-        elif self.db.get_bind().dialect.name == "sqlite":
-            query = text("""SELECT COUNT (*) FROM delivery_order WHERE strftime('%m', create_date) = :month
-                        AND strftime('%Y', create_date) = :year""")
-            AmountOfOrder = self.db.execute(query, {"month": f'{month:02}', "year": year}).scalar()
-        orderNO = AmountOfOrder + 1
-        DeliverNumber = f"PZ-{orderNO:03}-{month:02}-{year}"
-        # Sprawdzenie, czy numer zamówienia jest unikalny
-        checking_query = text(
-            "SELECT deliver_id FROM delivery_order WHERE deliver_id = :deliver_id"
-        )
-        checking = self.db.execute(checking_query, {"deliver_id": DeliverNumber}).fetchone()
-        if checking:
-            raise ValueError("Generated deliver number is already exist.")
-        return DeliverNumber
+        pattern = f"PZ-%-{month:02}-{year}"
+        query = text("""
+        SELECT MAX(deliver_id)
+        FROM delivery_order
+        WHERE deliver_id LIKE :pattern
+        """)
+
+        last_id = self.db.execute(query, {"pattern": pattern}).scalar()
+
+        if last_id:
+            # last_id np. "PZ-007-02-2026"
+            last_number = int(last_id.split("-")[1])
+            next_number = last_number + 1
+        else:
+            next_number = 1
+
+        deliver_number = f"PZ-{next_number:03}-{month:02}-{year}"
+
+        return deliver_number
+        # if self.db.get_bind().dialect.name == "postgresql":
+        #     # Pobranie liczby zamówieni z danego miesiaca
+        #     query = text("""SELECT COUNT (*) FROM delivery_order WHERE EXTRACT(MONTH FROM create_date) = :month
+        #                 AND EXTRACT(YEAR FROM create_date) = :year""")
+        #     AmountOfOrder = self.db.execute(query, {"month": month, "year": year}).scalar()
+        # elif self.db.get_bind().dialect.name == "sqlite":
+        #     query = text("""SELECT COUNT (*) FROM delivery_order WHERE strftime('%m', create_date) = :month
+        #                 AND strftime('%Y', create_date) = :year""")
+        #     AmountOfOrder = self.db.execute(query, {"month": f'{month:02}', "year": year}).scalar()
+        # orderNO = AmountOfOrder + 1
+        # DeliverNumber = f"PZ-{orderNO:03}-{month:02}-{year}"
+        # checking_query = text(
+        #     "SELECT deliver_id FROM delivery_order WHERE deliver_id = :deliver_id"
+        # )
+        # checking = self.db.execute(checking_query, {"deliver_id": DeliverNumber}).fetchone()
+        # if checking:
+        #     raise ValueError("Generated deliver number is already exist.")
+        # return DeliverNumber
 
     def check_deliver_to_do(self):
         result = self.db.execute(
