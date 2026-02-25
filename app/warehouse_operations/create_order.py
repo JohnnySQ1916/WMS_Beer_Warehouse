@@ -41,7 +41,7 @@ class CreateOrder:
         data = datetime.datetime.now()
         year = data.year
         month = data.month
-        pattern = f"PZ-%-{month:02}-{year}"
+        pattern = f"ZO-%-{month:02}-{year}"
         query = text("""
         SELECT MAX(order_id)
         FROM orders
@@ -53,7 +53,7 @@ class CreateOrder:
             next_number = last_number + 1
         else:
             next_number = 1
-        order_id = f"PZ-{next_number:03}-{month:02}-{year}"
+        order_id = f"ZO-{next_number:03}-{month:02}-{year}"
         return order_id
 
 
