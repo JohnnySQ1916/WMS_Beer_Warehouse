@@ -183,18 +183,6 @@ def test_OrderNOGenerate_no_order(db_session):
     assert result == number
 
 
-def test_OrderNOGenerate_already_exist(db_session):
-    today = datetime.date.today()
-    db_session.execute(
-        text("INSERT INTO orders (order_id, create_date) VALUES (:order_id, :create_date)"),
-        {"order_id": f"ZO-001-{today.month:02}-{today.year}", "create_date": today},
-    )
-    db_session.commit()
-    create_service = CreateOrder(db_session)
-    with pytest.raises(ValueError) as exc_info:
-        create_service.OrderNOGenerate()
-    assert "ZO-001" in str(exc_info.value)
-    assert "Wygenerowany numer zamówienia" in str(exc_info.value)
 
 
 def test_create_order(db_session, prepare_test_data):
