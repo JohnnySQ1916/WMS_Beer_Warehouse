@@ -54,8 +54,29 @@ class CreateOrder:
         else:
             next_number = 1
         order_id = f"ZO-{next_number:03}-{month:02}-{year}"
+        checking_query = text("SELECT order_id FROM orders WHERE order_id = :order_id")
+        checking = self.db.execute(checking_query, {"order_id": order_id}).fetchone()
+        if checking:
+            raise ValueError(
+                f"Wygenerowany numer zamówienia {order_id} już istnieje w bazie danych.")
         return order_id
-
+        # if self.db.get_bind().dialect.name == "postgresql":
+        #     query = text("""SELECT COUNT (*) FROM orders WHERE EXTRACT(MONTH FROM create_date) = :month
+        #                 AND EXTRACT(YEAR FROM create_date) = :year""")
+        #     AmountOfOrder = self.db.execute(query, {"month": month, "year": year}).scalar()
+        # elif self.db.get_bind().dialect.name == "sqlite":
+        #     query = text("""SELECT COUNT(*) FROM orders WHERE strftime('%m', create_date) = :month
+        #                     AND strftime('%Y', create_date) = :year""")
+        #     AmountOfOrder = self.db.execute(query, {"month": f'{month:02}', "year": (year)}).scalar()
+        # orderNO = AmountOfOrder + 1
+        # order_id = f"ZO-{orderNO:03}-{month:02}-{year}"
+        # checking_query = text("SELECT order_id FROM orders WHERE order_id = :order_id")
+        # checking = self.db.execute(checking_query, {"order_id": order_id}).fetchone()
+        # if checking:
+        #     raise ValueError(
+        #         f"Wygenerowany numer zamówienia {order_id} już istnieje w bazie danych."
+        #     )
+        # return order_id
 
     def making_reservation(self, order_id: str) -> str:
         with transaction(self.db):
