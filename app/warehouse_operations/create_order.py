@@ -11,7 +11,6 @@ from sqlalchemy import insert
 from sqlalchemy.engine import Row
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import text
-
 from app.constant.status import OrderStatus
 from app.models import OrdersDetails
 from app.warehouse_operations.product_operations import ProductService
@@ -42,23 +41,21 @@ class CreateOrder:
         data = datetime.datetime.now()
         year = data.year
         month = data.month
-        if self.db.get_bind().dialect.name == "postgresql":
-            query = text("""SELECT COUNT (*) FROM orders WHERE EXTRACT(MONTH FROM create_date) = :month
-                        AND EXTRACT(YEAR FROM create_date) = :year""")
-            AmountOfOrder = self.db.execute(query, {"month": month, "year": year}).scalar()
-        elif self.db.get_bind().dialect.name == "sqlite":
-            query = text("""SELECT COUNT(*) FROM orders WHERE strftime('%m', create_date) = :month
-                            AND strftime('%Y', create_date) = :year""")
-            AmountOfOrder = self.db.execute(query, {"month": f'{month:02}', "year": (year)}).scalar()
-        orderNO = AmountOfOrder + 1
-        order_id = f"ZO-{orderNO:03}-{month:02}-{year}"
-        checking_query = text("SELECT order_id FROM orders WHERE order_id = :order_id")
-        checking = self.db.execute(checking_query, {"order_id": order_id}).fetchone()
-        if checking:
-            raise ValueError(
-                f"Wygenerowany numer zamówienia {order_id} już istnieje w bazie danych."
-            )
+        pattern = f"PZ-%-{month:02}-{year}"
+        query = text("""
+        SELECT MAX(order_id)
+        FROM orders
+        WHERE order_id LIKE :pattern
+        """)
+        last_id = self.db.execute(query, {"pattern": pattern}).scalar()
+        if last_id:
+            last_number = int(last_id.split("-")[1])
+            next_number = last_number + 1
+        else:
+            next_number = 1
+        order_id = f"PZ-{next_number:03}-{month:02}-{year}"
         return order_id
+
 
     def making_reservation(self, order_id: str) -> str:
         with transaction(self.db):

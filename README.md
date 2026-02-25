@@ -68,3 +68,5 @@ docker compose up
 
 API available at:
 http://localhost:8000
+
+CI pipeline with pytest and Ruff linting configured via GitHub Actions.
