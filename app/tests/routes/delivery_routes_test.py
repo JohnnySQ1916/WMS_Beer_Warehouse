@@ -285,7 +285,7 @@ def test_create_supplier_delivery_document(
     exist = deliver_service.supplier_exist(company_name)
     if exist:
         assert response.status_code == 200
-        assert response_data["message"] == "Delivery add to database with number PZ-001-02-2026"
+        assert response_data["message"] == "Delivery add to database with number PZ-001-03-2026"
     else:
         assert response.status_code == 400
         assert (
