@@ -27,17 +27,28 @@ During order fulfillment, the system is designed to support efficient and ergono
 - PostgreSQL  
 - Uvicorn  
 - JWT authentication  
+- Docker / Docker Compose
+- CI (GitHub Actions: pytest + Ruff)
 
+## Run with Docker
 
-## Installation & Run
-1. Clone the repository:
+### 1. Clone the repository:
 ```bash
 git clone https://github.com/JohnnySQ1916/wms.git
 cd wms
+```
+### 2. Start containers
+```bash
+docker compose up --build
+```
+### 3. Import database dump
+```bash
+docker compose exec -T db psql -U postgres -d wms_db < database/wms_dump.sql
+```
+## API Documentation
 
-## Live API (Render)
-The API is deployed on Render and available at:
-https://wms-beer-warehouse.onrender.com
+Swagger UI:
+http://localhost:8000/docs
 
 ## Postman Documentation
 You can view the full API documentation here:  
@@ -55,18 +66,23 @@ POST /auth/login
 - Go to Authorization tab
 - Select: Bearer Token
 - Paste the token
-4. You can use key: "KS", value: 1
 
+## Test Access (Development Mode)
 
-## Docker
+For easier testing, the system includes a preconfigured test login.
 
-### Build
-docker compose build
+This allows quick access to the API without the need for user registration.
 
-### Run
-docker compose up
+- Username: `KS`
+- Password: `1`
+- Purpose: test user for development and API verification only
 
-API available at:
-http://localhost:8000
+This approach is intended to simplify local testing and demo workflows.
 
-CI pipeline with pytest and Ruff linting configured via GitHub Actions.
+## Project Features
+- warehouse stock management
+- order lifecycle handling
+- location-based inventory system
+- JWT-secured API
+- Dockerized environment
+- CI pipeline with testing and linting
