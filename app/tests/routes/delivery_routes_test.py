@@ -283,7 +283,6 @@ def test_create_supplier_delivery_document(
     )
     response_data = response.json()
     exist = deliver_service.supplier_exist(company_name)
-    deliver_number = 
     if exist:
         assert response.status_code == 200
         assert "Delivery add to database with number PZ-" in message
