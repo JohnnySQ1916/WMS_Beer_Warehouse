@@ -17,7 +17,7 @@ SECRET_KEY = os.getenv("JWT_SECRET", os.getenv("SECRET_KEY"))
 # SECRET_KEY = "ABCD"
 EXPIRE_MINUTES = int(os.getenv("JWT_EXPIRED_MINUTES", 60))
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")  # ścieżka do loginu
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/authentication/login")  # ścieżka do loginu
 
 print(f"DEBUG: SECRET_KEY is {SECRET_KEY}")
 

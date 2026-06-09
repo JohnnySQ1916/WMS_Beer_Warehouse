@@ -42,7 +42,6 @@ CREATE TABLE public.customers (
 );
 
 
-ALTER TABLE public.customers OWNER TO wms_beer_warehouse_user;
 
 --
 -- TOC entry 232 (class 1259 OID 25432)
@@ -65,7 +64,6 @@ CREATE TABLE public.deliver_details (
 );
 
 
-ALTER TABLE public.deliver_details OWNER TO wms_beer_warehouse_user;
 
 --
 -- TOC entry 231 (class 1259 OID 25431)
@@ -81,7 +79,6 @@ CREATE SEQUENCE public.deliver_details_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.deliver_details_id_seq OWNER TO wms_beer_warehouse_user;
 
 --
 -- TOC entry 4922 (class 0 OID 0)
@@ -107,7 +104,6 @@ CREATE TABLE public.delivery_order (
 );
 
 
-ALTER TABLE public.delivery_order OWNER TO wms_beer_warehouse_user;
 
 --
 -- TOC entry 217 (class 1259 OID 25189)
@@ -123,7 +119,6 @@ CREATE TABLE public.location_weights (
 );
 
 
-ALTER TABLE public.location_weights OWNER TO wms_beer_warehouse_user;
 
 --
 -- TOC entry 227 (class 1259 OID 25323)
@@ -148,7 +143,6 @@ CREATE TABLE public.order_picking_details (
 );
 
 
-ALTER TABLE public.order_picking_details OWNER TO wms_beer_warehouse_user;
 
 --
 -- TOC entry 226 (class 1259 OID 25322)
@@ -164,7 +158,6 @@ CREATE SEQUENCE public.order_picking_details_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.order_picking_details_id_seq OWNER TO wms_beer_warehouse_user;
 
 --
 -- TOC entry 4923 (class 0 OID 0)
@@ -193,7 +186,6 @@ CREATE TABLE public.orders (
 );
 
 
-ALTER TABLE public.orders OWNER TO wms_beer_warehouse_user;
 
 --
 -- TOC entry 220 (class 1259 OID 25232)
@@ -216,7 +208,6 @@ CREATE TABLE public.orders_details (
 );
 
 
-ALTER TABLE public.orders_details OWNER TO wms_beer_warehouse_user;
 
 --
 -- TOC entry 223 (class 1259 OID 25295)
@@ -232,7 +223,6 @@ CREATE SEQUENCE public.orders_details_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.orders_details_id_seq OWNER TO wms_beer_warehouse_user;
 
 --
 -- TOC entry 4924 (class 0 OID 0)
@@ -256,7 +246,6 @@ CREATE TABLE public.pallet_used (
 );
 
 
-ALTER TABLE public.pallet_used OWNER TO wms_beer_warehouse_user;
 
 --
 -- TOC entry 225 (class 1259 OID 25303)
@@ -277,7 +266,6 @@ CREATE TABLE public.picks (
 );
 
 
-ALTER TABLE public.picks OWNER TO wms_beer_warehouse_user;
 
 --
 -- TOC entry 224 (class 1259 OID 25302)
@@ -293,7 +281,6 @@ CREATE SEQUENCE public.picks_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.picks_id_seq OWNER TO wms_beer_warehouse_user;
 
 --
 -- TOC entry 4925 (class 0 OID 0)
@@ -319,7 +306,6 @@ CREATE TABLE public.product_details (
 );
 
 
-ALTER TABLE public.product_details OWNER TO wms_beer_warehouse_user;
 
 --
 -- TOC entry 233 (class 1259 OID 27974)
@@ -335,7 +321,6 @@ CREATE SEQUENCE public.product_details_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.product_details_id_seq OWNER TO wms_beer_warehouse_user;
 
 --
 -- TOC entry 4926 (class 0 OID 0)
@@ -366,7 +351,6 @@ CREATE TABLE public.products (
 );
 
 
-ALTER TABLE public.products OWNER TO wms_beer_warehouse_user;
 
 --
 -- TOC entry 235 (class 1259 OID 27990)
@@ -382,7 +366,6 @@ CREATE SEQUENCE public.products_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.products_id_seq OWNER TO wms_beer_warehouse_user;
 
 --
 -- TOC entry 4927 (class 0 OID 0)
@@ -412,7 +395,6 @@ CREATE TABLE public.relocation (
 );
 
 
-ALTER TABLE public.relocation OWNER TO wms_beer_warehouse_user;
 
 --
 -- TOC entry 229 (class 1259 OID 25339)
@@ -428,7 +410,6 @@ CREATE SEQUENCE public.relocation_session_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.relocation_session_id_seq OWNER TO wms_beer_warehouse_user;
 
 --
 -- TOC entry 4928 (class 0 OID 0)
@@ -454,7 +435,6 @@ CREATE TABLE public.reservation (
 );
 
 
-ALTER TABLE public.reservation OWNER TO wms_beer_warehouse_user;
 
 --
 -- TOC entry 234 (class 1259 OID 27981)
@@ -470,7 +450,6 @@ CREATE SEQUENCE public.reservation_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.reservation_id_seq OWNER TO wms_beer_warehouse_user;
 
 --
 -- TOC entry 4929 (class 0 OID 0)
@@ -502,7 +481,6 @@ CREATE TABLE public.suppliers (
 );
 
 
-ALTER TABLE public.suppliers OWNER TO wms_beer_warehouse_user;
 
 --
 -- TOC entry 240 (class 1259 OID 28062)
@@ -517,7 +495,6 @@ CREATE SEQUENCE public.suppliers_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.suppliers_id_seq OWNER TO wms_beer_warehouse_user;
 
 --
 -- TOC entry 239 (class 1259 OID 28061)
@@ -547,7 +524,6 @@ CREATE TABLE public.users (
 );
 
 
-ALTER TABLE public.users OWNER TO wms_beer_warehouse_user;
 
 --
 -- TOC entry 237 (class 1259 OID 28005)
@@ -563,7 +539,6 @@ CREATE SEQUENCE public.users_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.users_id_seq OWNER TO wms_beer_warehouse_user;
 
 --
 -- TOC entry 4930 (class 0 OID 0)
